@@ -265,62 +265,62 @@ function App() {
         onSetLoading={setLoading}
       />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* 地图始终显示 */}
-        <div style={{ flex: 1, minHeight: '400px' }}>
-          <MapComponent
-            points={points}
-            route={route}
-            selectedPoint={selectedPoint}
-            onSelectPoint={setSelectedPoint}
-          />
-          {selectedPoint && (
-            <PointDetail
-              point={selectedPoint}
-              onClose={() => setSelectedPoint(null)}
+        {/* 点位管理和路线规划时显示完整地图 */}
+        {(activeTab === 'points' || activeTab === 'route' || activeTab === 'map') && (
+          <div style={{ flex: 1 }}>
+            <MapComponent
+              points={points}
+              route={route}
+              selectedPoint={selectedPoint}
+              onSelectPoint={setSelectedPoint}
             />
-          )}
-        </div>
+            {selectedPoint && (
+              <PointDetail
+                point={selectedPoint}
+                onClose={() => setSelectedPoint(null)}
+              />
+            )}
+          </div>
+        )}
 
-        {/* 其他内容在地图下方 */}
-        {activeTab !== 'map' && (
-          <div style={{
-            height: '50%',
-            overflowY: 'auto',
-            padding: '20px',
-            background: 'white',
-            borderTop: '2px solid #e8e8e8'
-          }}>
-            {activeTab === 'version' && (
-              <VersionManager
-                projectId={project?.projectId}
-                onVersionSelect={(version) => {
-                  if (version.points) {
-                    setPoints(version.points)
-                    savePoints(version.points)
-                  }
-                  if (version.route) {
-                    setRoute(version.route)
-                    saveRoute(version.route)
-                  }
-                }}
-              />
-            )}
-            {activeTab === 'actual' && (
-              <ActualTripRecorder
-                projectId={project?.projectId}
-                points={points}
-              />
-            )}
-            {activeTab === 'summary' && (
-              <SummaryReport
-                projectId={project?.projectId}
-              />
-            )}
-            {activeTab === 'learning' && (
-              <LearningReport
-                projectId={project?.projectId}
-              />
-            )}
+        {/* 版本管理、实际行程、总结报告、学习进化时显示对应内容（无地图） */}
+        {activeTab === 'version' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+            <VersionManager
+              projectId={project?.projectId}
+              onVersionSelect={(version) => {
+                if (version.points) {
+                  setPoints(version.points)
+                  savePoints(version.points)
+                }
+                if (version.route) {
+                  setRoute(version.route)
+                  saveRoute(version.route)
+                }
+              }}
+            />
+          </div>
+        )}
+        {activeTab === 'actual' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+            <ActualTripRecorder
+              projectId={project?.projectId}
+              points={points}
+            />
+          </div>
+        )}
+        {activeTab === 'summary' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+            <SummaryReport
+              projectId={project?.projectId}
+            />
+          </div>
+        )}
+        {activeTab === 'learning' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+            <LearningReport
+              projectId={project?.projectId}
+            />
           </div>
         )}
       </div>
