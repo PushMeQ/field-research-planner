@@ -54,7 +54,7 @@ done
 
 # 安装主 Skill
 echo ""
-echo -e "${YELLOW}[2/2] 安装主 Skill...${NC}"
+echo -e "${YELLOW}[2/3] 安装主 Skill...${NC}"
 
 MAIN_SKILL_SOURCE="skill/field-research-plan.md"
 MAIN_SKILL_DEST="$SKILLS_DIR/field-research-plan.md"
@@ -64,6 +64,18 @@ if [ -f "$MAIN_SKILL_SOURCE" ]; then
     echo -e "  ${GREEN}✓ 已安装 field-research-plan${NC}"
 else
     echo -e "  ${RED}✗ 未找到主 Skill 文件${NC}"
+fi
+
+# 安装 Python 依赖
+echo ""
+echo -e "${YELLOW}[3/3] 安装 Python 依赖...${NC}"
+
+if python3 -c "import prettytable" 2>/dev/null; then
+    echo -e "  ${GREEN}✓ prettytable 已安装${NC}"
+else
+    echo -e "  安装 prettytable..."
+    pip3 install prettytable
+    echo -e "  ${GREEN}✓ prettytable 已安装${NC}"
 fi
 
 # 完成

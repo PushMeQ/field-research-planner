@@ -49,7 +49,7 @@ foreach ($skill in $dependencies) {
 
 # 安装主 Skill
 Write-Host ""
-Write-Host "[2/2] 安装主 Skill..." -ForegroundColor Yellow
+Write-Host "[2/3] 安装主 Skill..." -ForegroundColor Yellow
 
 $mainSkillSource = "skill\field-research-plan.md"
 $mainSkillDest = "$skillsDir\field-research-plan.md"
@@ -59,6 +59,23 @@ if (Test-Path $mainSkillSource) {
     Write-Host "  ✓ 已安装 field-research-plan" -ForegroundColor Green
 } else {
     Write-Host "  ✗ 未找到主 Skill 文件" -ForegroundColor Red
+}
+
+# 安装 Python 依赖
+Write-Host ""
+Write-Host "[3/3] 安装 Python 依赖..." -ForegroundColor Yellow
+
+try {
+    python -c "import prettytable" 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  ✓ prettytable 已安装" -ForegroundColor Green
+    } else {
+        Write-Host "  安装 prettytable..." -ForegroundColor Gray
+        pip install prettytable
+        Write-Host "  ✓ prettytable 已安装" -ForegroundColor Green
+    }
+} catch {
+    Write-Host "  ✗ 无法安装 prettytable（需要 Python 和 pip）" -ForegroundColor Red
 }
 
 # 完成
