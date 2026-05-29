@@ -1,0 +1,39 @@
+{
+  "projectId": "project-gansu-ancient-theater",
+  "name": "甘肃古戏台调查",
+  "province": "甘肃省",
+  "theme": "古戏台",
+  "createdAt": "2026-05-29T10:00:00Z",
+  "updatedAt": "2026-05-29T18:00:00Z",
+  "currentVersion": "1.0.0",
+  "totalVersions": 1,
+  "status": "completed",
+  "team": ["PushMeQ"],
+  "tags": ["古戏台", "田野调查", "甘肃"],
+  "departure": {
+    "city": "太原",
+    "date": "2026-05-30",
+    "transport": "高铁"
+  },
+  "return": {
+    "city": "太原",
+    "date": "2026-06-08",
+    "transport": "高铁+飞机"
+  },
+  "people": {
+    "total": 4,
+    "male": 2,
+    "female": 2
+  },
+  "transport": {
+    "mode": "自驾",
+    "vehicle": "SUV",
+    "count": 1
+  },
+  "accommodation": {
+    "type": "华住会",
+    "standard": "舒适型",
+    "rooms": 2,
+    "nights": 9
+  }
+}
