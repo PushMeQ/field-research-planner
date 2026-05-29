@@ -264,60 +264,67 @@ function App() {
         onShowProjectList={setShowProjectList}
         onSetLoading={setLoading}
       />
-      <div style={{ flex: 1, position: 'relative' }}>
-        {activeTab === 'map' && (
-          <>
-            <MapComponent
-              points={points}
-              route={route}
-              selectedPoint={selectedPoint}
-              onSelectPoint={setSelectedPoint}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        {/* 地图始终显示 */}
+        <div style={{ flex: 1, position: 'relative' }}>
+          <MapComponent
+            points={points}
+            route={route}
+            selectedPoint={selectedPoint}
+            onSelectPoint={setSelectedPoint}
+          />
+          {selectedPoint && (
+            <PointDetail
+              point={selectedPoint}
+              onClose={() => setSelectedPoint(null)}
             />
-            {selectedPoint && (
-              <PointDetail
-                point={selectedPoint}
-                onClose={() => setSelectedPoint(null)}
+          )}
+        </div>
+
+        {/* 其他内容覆盖在地图上方 */}
+        {activeTab !== 'map' && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(255, 255, 255, 0.95)',
+            overflowY: 'auto',
+            padding: '20px',
+            zIndex: 1000
+          }}>
+            {activeTab === 'version' && (
+              <VersionManager
+                projectId={project?.projectId}
+                onVersionSelect={(version) => {
+                  if (version.points) {
+                    setPoints(version.points)
+                    savePoints(version.points)
+                  }
+                  if (version.route) {
+                    setRoute(version.route)
+                    saveRoute(version.route)
+                  }
+                }}
               />
             )}
-          </>
-        )}
-        {activeTab === 'version' && (
-          <div style={{ padding: '20px', height: '100%', overflowY: 'auto' }}>
-            <VersionManager
-              projectId={project?.projectId}
-              onVersionSelect={(version) => {
-                if (version.points) {
-                  setPoints(version.points)
-                  savePoints(version.points)
-                }
-                if (version.route) {
-                  setRoute(version.route)
-                  saveRoute(version.route)
-                }
-              }}
-            />
-          </div>
-        )}
-        {activeTab === 'actual' && (
-          <div style={{ padding: '20px', height: '100%', overflowY: 'auto' }}>
-            <ActualTripRecorder
-              projectId={project?.projectId}
-              points={points}
-            />
-          </div>
-        )}
-        {activeTab === 'summary' && (
-          <div style={{ padding: '20px', height: '100%', overflowY: 'auto' }}>
-            <SummaryReport
-              projectId={project?.projectId}
-            />
-          </div>
-        )}
-        {activeTab === 'learning' && (
-          <div style={{ padding: '20px', height: '100%', overflowY: 'auto' }}>
-            <LearningReport
-              projectId={project?.projectId}
-            />
+            {activeTab === 'actual' && (
+              <ActualTripRecorder
+                projectId={project?.projectId}
+                points={points}
+              />
+            )}
+            {activeTab === 'summary' && (
+              <SummaryReport
+                projectId={project?.projectId}
+              />
+            )}
+            {activeTab === 'learning' && (
+              <LearningReport
+                projectId={project?.projectId}
+              />
+            )}
           </div>
         )}
       </div>

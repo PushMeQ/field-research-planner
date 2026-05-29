@@ -36,6 +36,8 @@ function Sidebar({
   const [importText, setImportText] = useState('')
   const [editingPoint, setEditingPoint] = useState(null)
   const [editForm, setEditForm] = useState({ name: '', address: '' })
+  const [draggedPoint, setDraggedPoint] = useState(null)
+  const [dragOverPoint, setDragOverPoint] = useState(null)
   const fileInputRef = useRef(null)
 
   const handleAddPoint = () => {
@@ -301,6 +303,55 @@ function Sidebar({
     newPoints[newIndex] = temp
 
     onReorderPoints(newPoints)
+  }
+
+  // 拖拽开始
+  const handleDragStart = (e, point) => {
+    setDraggedPoint(point)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', point.id)
+  }
+
+  // 拖拽经过
+  const handleDragOver = (e, point) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (draggedPoint && draggedPoint.id !== point.id) {
+      setDragOverPoint(point)
+    }
+  }
+
+  // 拖拽离开
+  const handleDragLeave = () => {
+    setDragOverPoint(null)
+  }
+
+  // 拖拽放下
+  const handleDrop = (e, targetPoint) => {
+    e.preventDefault()
+    setDragOverPoint(null)
+
+    if (!draggedPoint || draggedPoint.id === targetPoint.id) {
+      return
+    }
+
+    const draggedIndex = points.findIndex(p => p.id === draggedPoint.id)
+    const targetIndex = points.findIndex(p => p.id === targetPoint.id)
+
+    if (draggedIndex === -1 || targetIndex === -1) return
+
+    const newPoints = [...points]
+    const [removed] = newPoints.splice(draggedIndex, 1)
+    newPoints.splice(targetIndex, 0, removed)
+
+    onReorderPoints(newPoints)
+    setDraggedPoint(null)
+  }
+
+  // 拖拽结束
+  const handleDragEnd = () => {
+    setDraggedPoint(null)
+    setDragOverPoint(null)
   }
 
   // 开始编辑点位
@@ -884,8 +935,14 @@ function Sidebar({
                     {points.map((point, index) => (
                       <li
                         key={point.id}
-                        className={`point-item ${selectedPoint?.id === point.id ? 'active' : ''}`}
+                        className={`point-item ${selectedPoint?.id === point.id ? 'active' : ''} ${dragOverPoint?.id === point.id ? 'drag-over' : ''} ${draggedPoint?.id === point.id ? 'dragging' : ''}`}
                         onClick={() => onSelectPoint(point)}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, point)}
+                        onDragOver={(e) => handleDragOver(e, point)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, point)}
+                        onDragEnd={handleDragEnd}
                       >
                         {editingPoint === point.id ? (
                           // 编辑模式
@@ -950,53 +1007,27 @@ function Sidebar({
                                 </div>
                               )}
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <div style={{ display: 'flex', gap: '4px' }}>
-                                <button
-                                  className="btn btn-default"
-                                  style={{ padding: '2px 6px', fontSize: '11px' }}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleMovePoint(point.id, 'up')
-                                  }}
-                                  disabled={index === 0}
-                                >
-                                  ↑
-                                </button>
-                                <button
-                                  className="btn btn-default"
-                                  style={{ padding: '2px 6px', fontSize: '11px' }}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleMovePoint(point.id, 'down')
-                                  }}
-                                  disabled={index === points.length - 1}
-                                >
-                                  ↓
-                                </button>
-                              </div>
-                              <div style={{ display: 'flex', gap: '4px' }}>
-                                <button
-                                  className="btn btn-default"
-                                  style={{ padding: '2px 8px', fontSize: '12px' }}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleStartEdit(point)
-                                  }}
-                                >
-                                  编辑
-                                </button>
-                                <button
-                                  className="btn btn-default"
-                                  style={{ padding: '2px 8px', fontSize: '12px' }}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    onDeletePoint(point.id)
-                                  }}
-                                >
-                                  删除
-                                </button>
-                              </div>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                className="btn btn-default"
+                                style={{ padding: '2px 8px', fontSize: '12px' }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleStartEdit(point)
+                                }}
+                              >
+                                编辑
+                              </button>
+                              <button
+                                className="btn btn-default"
+                                style={{ padding: '2px 8px', fontSize: '12px' }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onDeletePoint(point.id)
+                                }}
+                              >
+                                删除
+                              </button>
                             </div>
                           </div>
                         )}

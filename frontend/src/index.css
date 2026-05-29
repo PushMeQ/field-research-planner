@@ -85,6 +85,24 @@ body {
   border-left: 3px solid #1890ff;
 }
 
+.point-item.dragging {
+  opacity: 0.5;
+  background: #e6f7ff;
+}
+
+.point-item.drag-over {
+  border-top: 2px solid #1890ff;
+  background: #f0f8ff;
+}
+
+.point-item[draggable] {
+  cursor: grab;
+}
+
+.point-item[draggable]:active {
+  cursor: grabbing;
+}
+
 .point-name {
   font-weight: 500;
   margin-bottom: 4px;
