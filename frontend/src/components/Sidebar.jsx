@@ -20,14 +20,18 @@ function Sidebar({
   onTabChange,
   onSwitchProject,
   onShowProjectList,
-  onSetLoading
+  onSetLoading,
+  onSetRoute
 }) {
   const [newPoint, setNewPoint] = useState({ name: '', address: '' })
   const [routeOptions, setRouteOptions] = useState({
     transportMode: 'driving',
     dailyHours: 8,
-    stayTime: 1
+    stayTime: 1,
+    planningMode: 'auto' // 'auto' 或 'manual'
   })
+  const [manualPlan, setManualPlan] = useState({}) // 手动规划的每日点位
+  const [editingDay, setEditingDay] = useState(null) // 正在编辑的天数
   const [projectName, setProjectName] = useState('')
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [importFile, setImportFile] = useState(null)
@@ -1051,6 +1055,27 @@ function Sidebar({
             <div className="card" style={{ marginBottom: '16px' }}>
               <div className="card-header">规划选项</div>
               <div className="card-body">
+                {/* 规划模式选择 */}
+                <div className="form-group">
+                  <label className="form-label">规划模式</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className={`btn ${routeOptions.planningMode === 'auto' ? 'btn-primary' : 'btn-default'}`}
+                      style={{ flex: 1 }}
+                      onClick={() => setRouteOptions(prev => ({ ...prev, planningMode: 'auto' }))}
+                    >
+                      智能规划
+                    </button>
+                    <button
+                      className={`btn ${routeOptions.planningMode === 'manual' ? 'btn-primary' : 'btn-default'}`}
+                      style={{ flex: 1 }}
+                      onClick={() => setRouteOptions(prev => ({ ...prev, planningMode: 'manual' }))}
+                    >
+                      自定义规划
+                    </button>
+                  </div>
+                </div>
+
                 <div className="form-group">
                   <label className="form-label">交通方式</label>
                   <select
@@ -1090,7 +1115,7 @@ function Sidebar({
                 <button
                   className="btn btn-primary"
                   style={{ width: '100%' }}
-                  onClick={handlePlanRoute}
+                  onClick={() => onPlanRoute(routeOptions, routeOptions.planningMode === 'manual' ? manualPlan : null)}
                   disabled={loading || points.length < 2}
                 >
                   {loading ? '规划中...' : '规划路线'}
@@ -1098,18 +1123,113 @@ function Sidebar({
               </div>
             </div>
 
+            {/* 手动规划模式 */}
+            {routeOptions.planningMode === 'manual' && (
+              <div className="card" style={{ marginBottom: '16px' }}>
+                <div className="card-header">自定义每日点位</div>
+                <div className="card-body">
+                  <div style={{ marginBottom: '12px', fontSize: '12px', color: '#666' }}>
+                    点击下方按钮，为每天选择要考察的点位
+                  </div>
+
+                  {/* 计算需要的天数 */}
+                  {Array.from({ length: Math.ceil(points.length / 3) }, (_, i) => i + 1).map(day => (
+                    <div key={day} style={{ marginBottom: '12px', padding: '12px', background: '#fafafa', borderRadius: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontWeight: '600' }}>第 {day} 天</span>
+                        <button
+                          className="btn btn-default"
+                          style={{ padding: '2px 8px', fontSize: '12px' }}
+                          onClick={() => setEditingDay(editingDay === day ? null : day)}
+                        >
+                          {editingDay === day ? '完成' : '编辑'}
+                        </button>
+                      </div>
+
+                      {/* 显示已选点位 */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {(manualPlan[day] || []).map((pointId, idx) => {
+                          const point = points.find(p => p.id === pointId)
+                          return point ? (
+                            <span key={idx} className="tag tag-blue" style={{ fontSize: '11px' }}>
+                              {point.name}
+                              {editingDay === day && (
+                                <span
+                                  style={{ marginLeft: '4px', cursor: 'pointer' }}
+                                  onClick={() => {
+                                    setManualPlan(prev => ({
+                                      ...prev,
+                                      [day]: prev[day].filter(id => id !== pointId)
+                                    }))
+                                  }}
+                                >
+                                  ×
+                                </span>
+                              )}
+                            </span>
+                          ) : null
+                        })}
+                      </div>
+
+                      {/* 编辑模式：选择点位 */}
+                      {editingDay === day && (
+                        <div style={{ marginTop: '8px', padding: '8px', background: 'white', borderRadius: '4px' }}>
+                          <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>点击添加点位：</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {points.filter(p => !(manualPlan[day] || []).includes(p.id)).map(point => (
+                              <button
+                                key={point.id}
+                                className="btn btn-default"
+                                style={{ padding: '2px 8px', fontSize: '11px' }}
+                                onClick={() => {
+                                  setManualPlan(prev => ({
+                                    ...prev,
+                                    [day]: [...(prev[day] || []), point.id]
+                                  }))
+                                }}
+                              >
+                                {point.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: '100%' }}
+                    onClick={() => onPlanRoute(routeOptions, manualPlan)}
+                    disabled={loading || Object.keys(manualPlan).length === 0}
+                  >
+                    {loading ? '规划中...' : '按自定义规划'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* 路线结果 */}
             {route && (
               <div className="card">
                 <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>规划结果</span>
-                  <button
-                    className="btn btn-primary"
-                    style={{ padding: '4px 12px', fontSize: '12px' }}
-                    onClick={handleExportHTML}
-                  >
-                    导出网页版
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="btn btn-default"
+                      style={{ padding: '4px 12px', fontSize: '12px' }}
+                      onClick={() => setEditingDay(editingDay === 'result' ? null : 'result')}
+                    >
+                      {editingDay === 'result' ? '完成编辑' : '修改分配'}
+                    </button>
+                    <button
+                      className="btn btn-primary"
+                      style={{ padding: '4px 12px', fontSize: '12px' }}
+                      onClick={handleExportHTML}
+                    >
+                      导出网页版
+                    </button>
+                  </div>
                 </div>
                 <div className="card-body">
                   <div style={{ marginBottom: '12px' }}>
@@ -1139,17 +1259,62 @@ function Sidebar({
                             background: 'white',
                             borderRadius: '4px',
                             marginBottom: pIndex < day.points.length - 1 ? '4px' : '0',
-                            borderLeft: '3px solid #1890ff'
+                            borderLeft: '3px solid #1890ff',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
                           }}>
-                            <div style={{ fontWeight: '500', fontSize: '14px' }}>
-                              {pIndex + 1}. {point.name}
+                            <div>
+                              <div style={{ fontWeight: '500', fontSize: '14px' }}>
+                                {pIndex + 1}. {point.name}
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                                {point.address}
+                              </div>
+                              {point.stayTime > 0 && (
+                                <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
+                                  停留：{point.stayTime} 小时
+                                </div>
+                              )}
                             </div>
-                            <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
-                              {point.address}
-                            </div>
-                            {point.stayTime > 0 && (
-                              <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
-                                停留：{point.stayTime} 小时
+
+                            {/* 编辑模式：移动点位 */}
+                            {editingDay === 'result' && (
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                {dayIndex > 0 && (
+                                  <button
+                                    className="btn btn-default"
+                                    style={{ padding: '2px 6px', fontSize: '11px' }}
+                                    onClick={() => {
+                                      // 移动到前一天
+                                      const newRoute = JSON.parse(JSON.stringify(route))
+                                      const prevDay = newRoute.dailyPlans[dayIndex - 1]
+                                      prevDay.points.push(point)
+                                      newRoute.dailyPlans[dayIndex].points.splice(pIndex, 1)
+                                      // 更新路线
+                                      if (onSetRoute) onSetRoute(newRoute)
+                                    }}
+                                  >
+                                    ← 前一天
+                                  </button>
+                                )}
+                                {dayIndex < route.dailyPlans.length - 1 && (
+                                  <button
+                                    className="btn btn-default"
+                                    style={{ padding: '2px 6px', fontSize: '11px' }}
+                                    onClick={() => {
+                                      // 移动到后一天
+                                      const newRoute = JSON.parse(JSON.stringify(route))
+                                      const nextDay = newRoute.dailyPlans[dayIndex + 1]
+                                      nextDay.points.unshift(point)
+                                      newRoute.dailyPlans[dayIndex].points.splice(pIndex, 1)
+                                      // 更新路线
+                                      if (onSetRoute) onSetRoute(newRoute)
+                                    }}
+                                  >
+                                    后一天 →
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
@@ -1167,8 +1332,8 @@ function Sidebar({
                               fontSize: '12px',
                               color: '#1890ff'
                             }}>
-                              <span>↓ {day.points[pIndex + 1].travelDistance?.toFixed(1) || '—'} 公里</span>
-                              <span>↓ {day.points[pIndex + 1].travelTime?.toFixed(1) || '—'} 小时</span>
+                              <span>↓ {day.points[pIndex + 1].travelDistance?.toFixed(1) || '0'} 公里</span>
+                              <span>↓ {day.points[pIndex + 1].travelTime?.toFixed(1) || '0'} 小时</span>
                             </div>
                           )}
                         </div>

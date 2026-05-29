@@ -168,7 +168,7 @@ function App() {
   }
 
   // 规划路线
-  const handlePlanRoute = async (options) => {
+  const handlePlanRoute = async (options, manualPlanData = null) => {
     try {
       setLoading(true)
       setError(null)
@@ -182,7 +182,9 @@ function App() {
           points: points,
           transportMode: options.transportMode,
           dailyHours: options.dailyHours,
-          stayTime: options.stayTime
+          stayTime: options.stayTime,
+          planningMode: options.planningMode,
+          manualPlan: manualPlanData
         })
       })
 
@@ -263,6 +265,7 @@ function App() {
         onSwitchProject={handleSwitchProject}
         onShowProjectList={setShowProjectList}
         onSetLoading={setLoading}
+        onSetRoute={setRoute}
       />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {/* 点位管理和路线规划时显示完整地图 */}
