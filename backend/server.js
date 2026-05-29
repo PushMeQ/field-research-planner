@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const NodeCache = require('node-cache');
 const geolib = require('geolib');
+const fs = require('fs').promises;
+const path = require('path');
 
 const app = express();
 const PORT = process.env.BACKEND_PORT || 3001;
@@ -442,6 +444,852 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// ==================== 版本管理 API ====================
+
+// 项目根目录
+const PROJECTS_ROOT = path.join(__dirname, '..', 'field-research-projects');
+
+// 确保项目根目录存在
+async function ensureProjectsRoot() {
+  try {
+    await fs.access(PROJECTS_ROOT);
+  } catch {
+    await fs.mkdir(PROJECTS_ROOT, { recursive: true });
+  }
+}
+
+// 生成项目 ID
+function generateProjectId() {
+  return `project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// 版本号判断
+function determineVersionType(changes) {
+  // 主版本变更
+  if (changes.pointsAdded > 0 || changes.pointsRemoved > 0 || changes.routeChanged) {
+    return 'major';
+  }
+
+  // 次版本变更
+  if (changes.detailsUpdated || changes.hotelsUpdated || changes.scheduleAdjusted) {
+    return 'minor';
+  }
+
+  // 修订版本变更
+  return 'patch';
+}
+
+// 版本号递增
+function incrementVersion(currentVersion, type) {
+  const [major, minor, patch] = currentVersion.split('.').map(Number);
+
+  switch (type) {
+    case 'major':
+      return `${major + 1}.0.0`;
+    case 'minor':
+      return `${major}.${minor + 1}.0`;
+    case 'patch':
+      return `${major}.${minor}.${patch + 1}`;
+    default:
+      return currentVersion;
+  }
+}
+
+// 创建项目
+app.post('/api/projects', async (req, res) => {
+  try {
+    await ensureProjectsRoot();
+
+    const { name, province, team } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: '项目名称不能为空' });
+    }
+
+    const projectId = generateProjectId();
+    const projectDir = path.join(PROJECTS_ROOT, projectId);
+
+    // 创建项目目录结构
+    await fs.mkdir(projectDir, { recursive: true });
+    await fs.mkdir(path.join(projectDir, 'versions'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, 'actual'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, 'summary'), { recursive: true });
+
+    // 创建元数据文件
+    const metadata = {
+      projectId,
+      name,
+      province: province || '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      currentVersion: '0.0.0',
+      totalVersions: 0,
+      status: 'created',
+      team: team || [],
+      tags: []
+    };
+
+    await fs.writeFile(
+      path.join(projectDir, 'metadata.json'),
+      JSON.stringify(metadata, null, 2)
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        projectId,
+        ...metadata
+      }
+    });
+  } catch (error) {
+    console.error('创建项目错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '创建项目失败'
+    });
+  }
+});
+
+// 获取项目列表
+app.get('/api/projects', async (req, res) => {
+  try {
+    await ensureProjectsRoot();
+
+    const dirs = await fs.readdir(PROJECTS_ROOT, { withFileTypes: true });
+    const projects = [];
+
+    for (const dir of dirs) {
+      if (dir.isDirectory()) {
+        try {
+          const metadataPath = path.join(PROJECTS_ROOT, dir.name, 'metadata.json');
+          const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
+          projects.push(metadata);
+        } catch {
+          // 忽略无效的项目目录
+        }
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: projects
+    });
+  } catch (error) {
+    console.error('获取项目列表错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '获取项目列表失败'
+    });
+  }
+});
+
+// 获取项目详情
+app.get('/api/projects/:projectId', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const projectDir = path.join(PROJECTS_ROOT, projectId);
+
+    const metadataPath = path.join(projectDir, 'metadata.json');
+    const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
+
+    return res.json({
+      success: true,
+      data: metadata
+    });
+  } catch (error) {
+    console.error('获取项目详情错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '获取项目详情失败'
+    });
+  }
+});
+
+// 创建版本
+app.post('/api/projects/:projectId/versions', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { changes, data } = req.body;
+
+    const projectDir = path.join(PROJECTS_ROOT, projectId);
+    const metadataPath = path.join(projectDir, 'metadata.json');
+
+    // 读取项目元数据
+    const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
+
+    // 确定版本类型
+    const versionType = determineVersionType(changes);
+
+    // 计算新版本号
+    const newVersion = incrementVersion(metadata.currentVersion, versionType);
+
+    // 创建版本目录
+    const versionDir = path.join(projectDir, 'versions', `v${newVersion}`);
+    await fs.mkdir(versionDir, { recursive: true });
+
+    // 保存版本数据
+    const versionData = {
+      version: newVersion,
+      createdAt: new Date().toISOString(),
+      createdBy: req.body.createdBy || 'unknown',
+      changes: {
+        type: versionType,
+        ...changes
+      },
+      ...data
+    };
+
+    await fs.writeFile(
+      path.join(versionDir, 'data.json'),
+      JSON.stringify(versionData, null, 2)
+    );
+
+    // 生成变更日志
+    const changelog = generateChangelog(newVersion, versionData);
+    await fs.writeFile(
+      path.join(versionDir, 'changelog.md'),
+      changelog
+    );
+
+    // 更新项目元数据
+    metadata.currentVersion = newVersion;
+    metadata.totalVersions += 1;
+    metadata.updatedAt = new Date().toISOString();
+    metadata.status = 'in-progress';
+
+    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+
+    return res.json({
+      success: true,
+      data: {
+        version: newVersion,
+        versionType,
+        ...versionData
+      }
+    });
+  } catch (error) {
+    console.error('创建版本错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '创建版本失败'
+    });
+  }
+});
+
+// 生成变更日志
+function generateChangelog(version, versionData) {
+  const { changes, createdAt, createdBy } = versionData;
+  const date = new Date(createdAt).toLocaleString('zh-CN');
+
+  let changelog = `# 版本 ${version} 变更日志\n\n`;
+  changelog += `**日期**：${date}\n`;
+  changelog += `**类型**：${getVersionTypeName(changes.type)}（${changes.type.toUpperCase()}）\n`;
+  changelog += `**创建者**：${createdBy}\n\n`;
+
+  changelog += `## 变更内容\n\n`;
+
+  if (changes.description) {
+    changelog += `### 概述\n${changes.description}\n\n`;
+  }
+
+  if (changes.pointsAdded > 0) {
+    changelog += `### 新增点位\n- 新增 ${changes.pointsAdded} 个考察点位\n\n`;
+  }
+
+  if (changes.pointsRemoved > 0) {
+    changelog += `### 删除点位\n- 删除 ${changes.pointsRemoved} 个考察点位\n\n`;
+  }
+
+  if (changes.routeChanged) {
+    changelog += `### 路线调整\n- 路线已重新规划\n\n`;
+  }
+
+  if (changes.detailsUpdated) {
+    changelog += `### 详情更新\n- 更新了点位详细信息\n\n`;
+  }
+
+  if (changes.hotelsUpdated) {
+    changelog += `### 住宿更新\n- 更新了住宿安排\n\n`;
+  }
+
+  if (changes.scheduleAdjusted) {
+    changelog += `### 行程调整\n- 调整了每日行程安排\n\n`;
+  }
+
+  return changelog;
+}
+
+// 获取版本类型名称
+function getVersionTypeName(type) {
+  const names = {
+    major: '主版本',
+    minor: '次版本',
+    patch: '修订版本'
+  };
+  return names[type] || type;
+}
+
+// 获取版本列表
+app.get('/api/projects/:projectId/versions', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const versionsDir = path.join(PROJECTS_ROOT, projectId, 'versions');
+
+    const dirs = await fs.readdir(versionsDir, { withFileTypes: true });
+    const versions = [];
+
+    for (const dir of dirs) {
+      if (dir.isDirectory() && dir.name.startsWith('v')) {
+        try {
+          const dataPath = path.join(versionsDir, dir.name, 'data.json');
+          const data = JSON.parse(await fs.readFile(dataPath, 'utf-8'));
+          versions.push(data);
+        } catch {
+          // 忽略无效的版本目录
+        }
+      }
+    }
+
+    // 按版本号排序
+    versions.sort((a, b) => {
+      const vA = a.version.split('.').map(Number);
+      const vB = b.version.split('.').map(Number);
+      return (vB[0] - vA[0]) || (vB[1] - vA[1]) || (vB[2] - vA[2]);
+    });
+
+    return res.json({
+      success: true,
+      data: versions
+    });
+  } catch (error) {
+    console.error('获取版本列表错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '获取版本列表失败'
+    });
+  }
+});
+
+// 获取特定版本
+app.get('/api/projects/:projectId/versions/:version', async (req, res) => {
+  try {
+    const { projectId, version } = req.params;
+    const dataPath = path.join(PROJECTS_ROOT, projectId, 'versions', `v${version}`, 'data.json');
+
+    const data = JSON.parse(await fs.readFile(dataPath, 'utf-8'));
+
+    return res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    console.error('获取版本详情错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '获取版本详情失败'
+    });
+  }
+});
+
+// 记录实际行程
+app.post('/api/projects/:projectId/actual', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { day, date, pointsVisited, totalDistance, totalHours, notes } = req.body;
+
+    const projectDir = path.join(PROJECTS_ROOT, projectId);
+    const actualDir = path.join(projectDir, 'actual');
+
+    // 确保目录存在
+    await fs.mkdir(actualDir, { recursive: true });
+
+    // 生成文件名
+    const fileName = `day-${String(day).padStart(2, '0')}.json`;
+    const filePath = path.join(actualDir, fileName);
+
+    // 构建实际行程数据
+    const actualData = {
+      day,
+      date,
+      recordedAt: new Date().toISOString(),
+      pointsVisited: pointsVisited || [],
+      totalDistance: totalDistance || 0,
+      totalHours: totalHours || 0,
+      notes: notes || ''
+    };
+
+    await fs.writeFile(filePath, JSON.stringify(actualData, null, 2));
+
+    // 更新项目元数据
+    const metadataPath = path.join(projectDir, 'metadata.json');
+    const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
+    metadata.updatedAt = new Date().toISOString();
+    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+
+    return res.json({
+      success: true,
+      data: actualData
+    });
+  } catch (error) {
+    console.error('记录实际行程错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '记录实际行程失败'
+    });
+  }
+});
+
+// 获取实际行程列表
+app.get('/api/projects/:projectId/actual', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const actualDir = path.join(PROJECTS_ROOT, projectId, 'actual');
+
+    const files = await fs.readdir(actualDir);
+    const actualRecords = [];
+
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        try {
+          const filePath = path.join(actualDir, file);
+          const data = JSON.parse(await fs.readFile(filePath, 'utf-8'));
+          actualRecords.push(data);
+        } catch {
+          // 忽略无效的文件
+        }
+      }
+    }
+
+    // 按天数排序
+    actualRecords.sort((a, b) => a.day - b.day);
+
+    return res.json({
+      success: true,
+      data: actualRecords
+    });
+  } catch (error) {
+    console.error('获取实际行程错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '获取实际行程失败'
+    });
+  }
+});
+
+// 生成总结报告
+app.post('/api/projects/:projectId/summary', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const projectDir = path.join(PROJECTS_ROOT, projectId);
+
+    // 读取项目元数据
+    const metadataPath = path.join(projectDir, 'metadata.json');
+    const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
+
+    // 读取最新版本数据
+    const versionsDir = path.join(projectDir, 'versions');
+    const versionDirs = await fs.readdir(versionsDir);
+    let latestVersion = null;
+
+    for (const dir of versionDirs) {
+      if (dir.startsWith('v')) {
+        const dataPath = path.join(versionsDir, dir, 'data.json');
+        try {
+          const data = JSON.parse(await fs.readFile(dataPath, 'utf-8'));
+          if (!latestVersion || data.version > latestVersion.version) {
+            latestVersion = data;
+          }
+        } catch {
+          // 忽略无效的版本
+        }
+      }
+    }
+
+    // 读取所有实际行程记录
+    const actualDir = path.join(projectDir, 'actual');
+    const actualFiles = await fs.readdir(actualDir);
+    const actualRecords = [];
+
+    for (const file of actualFiles) {
+      if (file.endsWith('.json')) {
+        try {
+          const filePath = path.join(actualDir, file);
+          const data = JSON.parse(await fs.readFile(filePath, 'utf-8'));
+          actualRecords.push(data);
+        } catch {
+          // 忽略无效的文件
+        }
+      }
+    }
+
+    // 计算统计数据
+    const statistics = calculateStatistics(latestVersion, actualRecords);
+
+    // 生成总结报告
+    const summaryReport = generateSummaryReport(metadata, latestVersion, actualRecords, statistics);
+
+    // 保存总结报告
+    const summaryDir = path.join(projectDir, 'summary');
+    await fs.mkdir(summaryDir, { recursive: true });
+
+    await fs.writeFile(
+      path.join(summaryDir, 'statistics.json'),
+      JSON.stringify(statistics, null, 2)
+    );
+
+    await fs.writeFile(
+      path.join(summaryDir, 'final-report.html'),
+      summaryReport
+    );
+
+    // 更新项目状态
+    metadata.status = 'completed';
+    metadata.updatedAt = new Date().toISOString();
+    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+
+    return res.json({
+      success: true,
+      data: {
+        statistics,
+        reportPath: path.join(summaryDir, 'final-report.html')
+      }
+    });
+  } catch (error) {
+    console.error('生成总结报告错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '生成总结报告失败'
+    });
+  }
+});
+
+// 计算统计数据
+function calculateStatistics(plannedVersion, actualRecords) {
+  const planned = plannedVersion || {};
+  const plannedPoints = planned.points || [];
+  const plannedRoute = planned.route || {};
+
+  // 计划数据
+  const plannedTotalPoints = plannedPoints.length;
+  const plannedTotalDistance = plannedRoute.totalDistance || 0;
+  const plannedTotalDays = plannedRoute.totalDays || 0;
+
+  // 实际数据
+  let actualTotalPoints = 0;
+  let actualTotalDistance = 0;
+  let actualTotalHours = 0;
+
+  for (const record of actualRecords) {
+    actualTotalPoints += (record.pointsVisited || []).length;
+    actualTotalDistance += record.totalDistance || 0;
+    actualTotalHours += record.totalHours || 0;
+  }
+
+  const actualTotalDays = actualRecords.length;
+
+  // 计算差异
+  const pointsDiff = actualTotalPoints - plannedTotalPoints;
+  const distanceDiff = actualTotalDistance - plannedTotalDistance;
+  const daysDiff = actualTotalDays - plannedTotalDays;
+
+  // 计算完成率
+  const completionRate = plannedTotalPoints > 0
+    ? (actualTotalPoints / plannedTotalPoints) * 100
+    : 0;
+
+  // 计算平均值
+  const avgPointsPerDay = actualTotalDays > 0
+    ? actualTotalPoints / actualTotalDays
+    : 0;
+
+  const avgHoursPerDay = actualTotalDays > 0
+    ? actualTotalHours / actualTotalDays
+    : 0;
+
+  const avgDistancePerDay = actualTotalDays > 0
+    ? actualTotalDistance / actualTotalDays
+    : 0;
+
+  return {
+    planned: {
+      totalPoints: plannedTotalPoints,
+      totalDistance: plannedTotalDistance,
+      totalDays: plannedTotalDays
+    },
+    actual: {
+      totalPoints: actualTotalPoints,
+      totalDistance: actualTotalDistance,
+      totalDays: actualTotalDays,
+      totalHours: actualTotalHours
+    },
+    diff: {
+      points: pointsDiff,
+      distance: distanceDiff,
+      days: daysDiff
+    },
+    completionRate,
+    averages: {
+      pointsPerDay: avgPointsPerDay,
+      hoursPerDay: avgHoursPerDay,
+      distancePerDay: avgDistancePerDay
+    }
+  };
+}
+
+// 生成总结报告 HTML
+function generateSummaryReport(metadata, plannedVersion, actualRecords, statistics) {
+  const { planned, actual, diff, completionRate, averages } = statistics;
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>田野调查总结报告 - ${metadata.name}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .header {
+      background: #1890ff;
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .header p {
+      margin: 10px 0 0;
+      opacity: 0.9;
+    }
+    .content {
+      padding: 30px;
+    }
+    .section {
+      margin-bottom: 30px;
+    }
+    .section h2 {
+      color: #1890ff;
+      border-bottom: 2px solid #1890ff;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #1890ff;
+    }
+    .stat-label {
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    .comparison-table th,
+    .comparison-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    .comparison-table th {
+      background: #f8f9fa;
+      font-weight: 600;
+    }
+    .positive {
+      color: #52c41a;
+    }
+    .negative {
+      color: #ff4d4f;
+    }
+    .suggestions {
+      background: #fff7e6;
+      border: 1px solid #ffd591;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .suggestions h3 {
+      color: #fa8c16;
+      margin-top: 0;
+    }
+    .suggestions ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .suggestions li {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>田野调查总结报告</h1>
+      <p>项目：${metadata.name}</p>
+      <p>时间：${metadata.createdAt.split('T')[0]} 至 ${new Date().toISOString().split('T')[0]}</p>
+    </div>
+
+    <div class="content">
+      <div class="section">
+        <h2>完成情况</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${completionRate.toFixed(1)}%</div>
+            <div class="stat-label">完成率</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${actual.totalPoints}</div>
+            <div class="stat-label">实际完成点位</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value ${diff.points >= 0 ? 'positive' : 'negative'}">
+              ${diff.points >= 0 ? '+' : ''}${diff.points}
+            </div>
+            <div class="stat-label">点位差异</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>行程统计</h2>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>指标</th>
+              <th>计划</th>
+              <th>实际</th>
+              <th>差异</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>考察点位</td>
+              <td>${planned.totalPoints} 个</td>
+              <td>${actual.totalPoints} 个</td>
+              <td class="${diff.points >= 0 ? 'positive' : 'negative'}">
+                ${diff.points >= 0 ? '+' : ''}${diff.points} 个
+              </td>
+            </tr>
+            <tr>
+              <td>总里程</td>
+              <td>${planned.totalDistance.toFixed(1)} 公里</td>
+              <td>${actual.totalDistance.toFixed(1)} 公里</td>
+              <td class="${diff.distance >= 0 ? 'positive' : 'negative'}">
+                ${diff.distance >= 0 ? '+' : ''}${diff.distance.toFixed(1)} 公里
+              </td>
+            </tr>
+            <tr>
+              <td>总天数</td>
+              <td>${planned.totalDays} 天</td>
+              <td>${actual.totalDays} 天</td>
+              <td class="${diff.days >= 0 ? 'positive' : 'negative'}">
+                ${diff.days >= 0 ? '+' : ''}${diff.days} 天
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>平均数据</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${averages.pointsPerDay.toFixed(1)}</div>
+            <div class="stat-label">每日点位数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${averages.hoursPerDay.toFixed(1)}</div>
+            <div class="stat-label">每日工作时长</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${averages.distancePerDay.toFixed(1)}</div>
+            <div class="stat-label">每日里程</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>改进建议</h2>
+        <div class="suggestions">
+          <h3>基于本次调查的建议</h3>
+          <ul>
+            ${generateSuggestions(statistics)}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+// 生成改进建议
+function generateSuggestions(statistics) {
+  const { planned, actual, averages } = statistics;
+  const suggestions = [];
+
+  // 点位数量建议
+  if (averages.pointsPerDay > 2.5) {
+    suggestions.push('每日点位数量较多，建议适当减少，确保每个点位有充足时间考察');
+  } else if (averages.pointsPerDay < 2) {
+    suggestions.push('每日点位数量较少，可考虑增加至 2-3 个，提高效率');
+  }
+
+  // 工作时长建议
+  if (averages.hoursPerDay > 10) {
+    suggestions.push('每日工作时长过长，建议控制在 8 小时以内，避免疲劳');
+  } else if (averages.hoursPerDay < 6) {
+    suggestions.push('每日工作时长较短，可考虑适当延长，充分利用时间');
+  }
+
+  // 里程建议
+  if (averages.distancePerDay > 200) {
+    suggestions.push('每日行驶里程较长，建议优化路线，减少不必要往返');
+  }
+
+  // 完成率建议
+  if (actual.totalPoints > planned.totalPoints) {
+    suggestions.push('实际完成点位超出计划，说明计划较为保守，下次可适当增加');
+  } else if (actual.totalPoints < planned.totalPoints * 0.8) {
+    suggestions.push('实际完成点位不足计划的 80%，建议调整计划或提高效率');
+  }
+
+  // 默认建议
+  if (suggestions.length === 0) {
+    suggestions.push('本次调查执行情况良好，建议保持现有规划方式');
+  }
+
+  return suggestions.map(s => `<li>${s}</li>`).join('\n            ');
+}
 
 // 启动服务器
 app.listen(PORT, () => {

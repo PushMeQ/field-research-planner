@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react'
 import MapComponent from './components/MapComponent'
 import Sidebar from './components/Sidebar'
 import PointDetail from './components/PointDetail'
-import { getPoints, savePoints, getRoute, saveRoute } from './utils/api'
+import VersionManager from './components/VersionManager'
+import ActualTripRecorder from './components/ActualTripRecorder'
+import SummaryReport from './components/SummaryReport'
+import { getPoints, savePoints, getRoute, saveRoute, createProject, getProjects } from './utils/api'
 
 function App() {
   const [points, setPoints] = useState([])
@@ -10,17 +13,23 @@ function App() {
   const [selectedPoint, setSelectedPoint] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [project, setProject] = useState(null)
+  const [activeTab, setActiveTab] = useState('map') // map, version, actual, summary
 
   // 加载保存的数据
   useEffect(() => {
     const savedPoints = localStorage.getItem('field-research-points')
     const savedRoute = localStorage.getItem('field-research-route')
+    const savedProject = localStorage.getItem('field-research-project')
 
     if (savedPoints) {
       setPoints(JSON.parse(savedPoints))
     }
     if (savedRoute) {
       setRoute(JSON.parse(savedRoute))
+    }
+    if (savedProject) {
+      setProject(JSON.parse(savedProject))
     }
   }, [])
 
@@ -36,6 +45,12 @@ function App() {
       localStorage.setItem('field-research-route', JSON.stringify(route))
     }
   }, [route])
+
+  useEffect(() => {
+    if (project) {
+      localStorage.setItem('field-research-project', JSON.stringify(project))
+    }
+  }, [project])
 
   // 添加点位
   const handleAddPoint = async (pointData) => {
@@ -133,6 +148,28 @@ function App() {
     localStorage.removeItem('field-research-route')
   }
 
+  // 创建项目
+  const handleCreateProject = async (projectName) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const result = await createProject({
+        name: projectName,
+        province: '',
+        team: ['user']
+      })
+
+      if (result.success) {
+        setProject(result.data)
+      }
+    } catch (err) {
+      setError('创建项目失败：' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
       <Sidebar
@@ -141,25 +178,65 @@ function App() {
         selectedPoint={selectedPoint}
         loading={loading}
         error={error}
+        project={project}
+        activeTab={activeTab}
         onAddPoint={handleAddPoint}
         onDeletePoint={handleDeletePoint}
         onReorderPoints={handleReorderPoints}
         onPlanRoute={handlePlanRoute}
         onSelectPoint={setSelectedPoint}
         onClearAll={handleClearAll}
+        onCreateProject={handleCreateProject}
+        onTabChange={setActiveTab}
       />
       <div style={{ flex: 1, position: 'relative' }}>
-        <MapComponent
-          points={points}
-          route={route}
-          selectedPoint={selectedPoint}
-          onSelectPoint={setSelectedPoint}
-        />
-        {selectedPoint && (
-          <PointDetail
-            point={selectedPoint}
-            onClose={() => setSelectedPoint(null)}
-          />
+        {activeTab === 'map' && (
+          <>
+            <MapComponent
+              points={points}
+              route={route}
+              selectedPoint={selectedPoint}
+              onSelectPoint={setSelectedPoint}
+            />
+            {selectedPoint && (
+              <PointDetail
+                point={selectedPoint}
+                onClose={() => setSelectedPoint(null)}
+              />
+            )}
+          </>
+        )}
+        {activeTab === 'version' && (
+          <div style={{ padding: '20px', height: '100%', overflowY: 'auto' }}>
+            <VersionManager
+              projectId={project?.projectId}
+              onVersionSelect={(version) => {
+                if (version.points) {
+                  setPoints(version.points)
+                  savePoints(version.points)
+                }
+                if (version.route) {
+                  setRoute(version.route)
+                  saveRoute(version.route)
+                }
+              }}
+            />
+          </div>
+        )}
+        {activeTab === 'actual' && (
+          <div style={{ padding: '20px', height: '100%', overflowY: 'auto' }}>
+            <ActualTripRecorder
+              projectId={project?.projectId}
+              points={points}
+            />
+          </div>
+        )}
+        {activeTab === 'summary' && (
+          <div style={{ padding: '20px', height: '100%', overflowY: 'auto' }}>
+            <SummaryReport
+              projectId={project?.projectId}
+            />
+          </div>
         )}
       </div>
     </div>

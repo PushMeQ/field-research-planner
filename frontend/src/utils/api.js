@@ -85,7 +85,109 @@ export const healthCheck = async () => {
   }
 }
 
-// 本地存储操作
+// ==================== 项目管理 API ====================
+
+// 创建项目
+export const createProject = async (projectData) => {
+  try {
+    const response = await api.post('/projects', projectData)
+    return response.data
+  } catch (error) {
+    console.error('创建项目失败:', error)
+    throw error
+  }
+}
+
+// 获取项目列表
+export const getProjects = async () => {
+  try {
+    const response = await api.get('/projects')
+    return response.data
+  } catch (error) {
+    console.error('获取项目列表失败:', error)
+    throw error
+  }
+}
+
+// 获取项目详情
+export const getProject = async (projectId) => {
+  try {
+    const response = await api.get(`/projects/${projectId}`)
+    return response.data
+  } catch (error) {
+    console.error('获取项目详情失败:', error)
+    throw error
+  }
+}
+
+// 创建版本
+export const createVersion = async (projectId, versionData) => {
+  try {
+    const response = await api.post(`/projects/${projectId}/versions`, versionData)
+    return response.data
+  } catch (error) {
+    console.error('创建版本失败:', error)
+    throw error
+  }
+}
+
+// 获取版本列表
+export const getVersions = async (projectId) => {
+  try {
+    const response = await api.get(`/projects/${projectId}/versions`)
+    return response.data
+  } catch (error) {
+    console.error('获取版本列表失败:', error)
+    throw error
+  }
+}
+
+// 获取特定版本
+export const getVersion = async (projectId, version) => {
+  try {
+    const response = await api.get(`/projects/${projectId}/versions/${version}`)
+    return response.data
+  } catch (error) {
+    console.error('获取版本详情失败:', error)
+    throw error
+  }
+}
+
+// 记录实际行程
+export const recordActualTrip = async (projectId, actualData) => {
+  try {
+    const response = await api.post(`/projects/${projectId}/actual`, actualData)
+    return response.data
+  } catch (error) {
+    console.error('记录实际行程失败:', error)
+    throw error
+  }
+}
+
+// 获取实际行程列表
+export const getActualTrips = async (projectId) => {
+  try {
+    const response = await api.get(`/projects/${projectId}/actual`)
+    return response.data
+  } catch (error) {
+    console.error('获取实际行程失败:', error)
+    throw error
+  }
+}
+
+// 生成总结报告
+export const generateSummary = async (projectId) => {
+  try {
+    const response = await api.post(`/projects/${projectId}/summary`)
+    return response.data
+  } catch (error) {
+    console.error('生成总结报告失败:', error)
+    throw error
+  }
+}
+
+// ==================== 本地存储操作 ====================
+
 export const getPoints = () => {
   const points = localStorage.getItem('field-research-points')
   return points ? JSON.parse(points) : []

@@ -6,12 +6,16 @@ function Sidebar({
   selectedPoint,
   loading,
   error,
+  project,
+  activeTab,
   onAddPoint,
   onDeletePoint,
   onReorderPoints,
   onPlanRoute,
   onSelectPoint,
-  onClearAll
+  onClearAll,
+  onCreateProject,
+  onTabChange
 }) {
   const [newPoint, setNewPoint] = useState({ name: '', address: '' })
   const [routeOptions, setRouteOptions] = useState({
@@ -19,7 +23,7 @@ function Sidebar({
     dailyHours: 8,
     stayTime: 1
   })
-  const [activeTab, setActiveTab] = useState('points')
+  const [projectName, setProjectName] = useState('')
 
   const handleAddPoint = () => {
     if (!newPoint.name || !newPoint.address) {
@@ -42,6 +46,7 @@ function Sidebar({
     const data = {
       points,
       route,
+      project,
       exportTime: new Date().toISOString()
     }
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -51,6 +56,15 @@ function Sidebar({
     a.download = 'field-research-data.json'
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const handleCreateProject = () => {
+    if (!projectName.trim()) {
+      alert('请输入项目名称')
+      return
+    }
+    onCreateProject(projectName.trim())
+    setProjectName('')
   }
 
   const handleImportData = (e) => {
@@ -93,21 +107,78 @@ function Sidebar({
           </div>
         )}
 
+        {/* 项目管理 */}
+        {!project && (
+          <div className="card" style={{ marginBottom: '16px' }}>
+            <div className="card-header">创建项目</div>
+            <div className="card-body">
+              <div className="form-group">
+                <label className="form-label">项目名称</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="例：甘肃古戏台调查"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                />
+              </div>
+              <button
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                onClick={handleCreateProject}
+                disabled={loading || !projectName.trim()}
+              >
+                {loading ? '创建中...' : '创建项目'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {project && (
+          <div style={{ marginBottom: '16px', padding: '12px', background: '#e6f7ff', borderRadius: '4px' }}>
+            <div style={{ fontWeight: '600', marginBottom: '4px' }}>{project.name}</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              项目 ID: {project.projectId}
+            </div>
+          </div>
+        )}
+
         {/* 标签页 */}
-        <div style={{ display: 'flex', marginBottom: '16px', borderBottom: '1px solid #f0f0f0' }}>
+        <div style={{ display: 'flex', marginBottom: '16px', borderBottom: '1px solid #f0f0f0', flexWrap: 'wrap' }}>
           <button
             className={`btn ${activeTab === 'points' ? 'btn-primary' : 'btn-default'}`}
-            style={{ flex: 1, borderRadius: '4px 4px 0 0' }}
-            onClick={() => setActiveTab('points')}
+            style={{ flex: 1, borderRadius: '4px 4px 0 0', minWidth: '80px' }}
+            onClick={() => onTabChange('points')}
           >
             点位管理
           </button>
           <button
             className={`btn ${activeTab === 'route' ? 'btn-primary' : 'btn-default'}`}
-            style={{ flex: 1, borderRadius: '4px 4px 0 0' }}
-            onClick={() => setActiveTab('route')}
+            style={{ flex: 1, borderRadius: '4px 4px 0 0', minWidth: '80px' }}
+            onClick={() => onTabChange('route')}
           >
             路线规划
+          </button>
+          <button
+            className={`btn ${activeTab === 'version' ? 'btn-primary' : 'btn-default'}`}
+            style={{ flex: 1, borderRadius: '4px 4px 0 0', minWidth: '80px' }}
+            onClick={() => onTabChange('version')}
+          >
+            版本管理
+          </button>
+          <button
+            className={`btn ${activeTab === 'actual' ? 'btn-primary' : 'btn-default'}`}
+            style={{ flex: 1, borderRadius: '4px 4px 0 0', minWidth: '80px' }}
+            onClick={() => onTabChange('actual')}
+          >
+            实际行程
+          </button>
+          <button
+            className={`btn ${activeTab === 'summary' ? 'btn-primary' : 'btn-default'}`}
+            style={{ flex: 1, borderRadius: '4px 4px 0 0', minWidth: '80px' }}
+            onClick={() => onTabChange('summary')}
+          >
+            总结报告
           </button>
         </div>
 
