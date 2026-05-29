@@ -286,12 +286,13 @@ function calculateDailyPlans(route, points, distanceMatrix, speed, dailyHours, s
     const pointIndex = route[i];
     const point = points[pointIndex];
 
-    // 计算到下一个点的时间
+    // 计算到下一个点的距离和时间
     let travelTime = 0;
+    let travelDistance = 0;
     if (i > 0) {
       const prevIndex = route[i - 1];
-      const distance = distanceMatrix[prevIndex][pointIndex];
-      travelTime = distance / speed;
+      travelDistance = distanceMatrix[prevIndex][pointIndex];
+      travelTime = travelDistance / speed;
     }
 
     // 检查是否超出每日时间限制
@@ -306,6 +307,7 @@ function calculateDailyPlans(route, points, distanceMatrix, speed, dailyHours, s
       };
       currentHour = 0;
       travelTime = 0;
+      travelDistance = 0;
     }
 
     // 添加点位到当天计划
@@ -313,10 +315,11 @@ function calculateDailyPlans(route, points, distanceMatrix, speed, dailyHours, s
       ...point,
       order: i + 1,
       travelTime: travelTime,
+      travelDistance: travelDistance,
       stayTime: stayTime
     });
 
-    currentPlan.totalDistance += i > 0 ? distanceMatrix[route[i - 1]][pointIndex] : 0;
+    currentPlan.totalDistance += travelDistance;
     currentPlan.totalHours += travelTime + stayTime;
     currentHour += travelTime + stayTime;
   }

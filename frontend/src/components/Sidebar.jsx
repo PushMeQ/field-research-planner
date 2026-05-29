@@ -1117,23 +1117,59 @@ function Sidebar({
                     <span className="tag tag-orange" style={{ marginLeft: '8px' }}>
                       总天数：{route.totalDays} 天
                     </span>
+                    <span className="tag tag-blue" style={{ marginLeft: '8px' }}>
+                      交通方式：{routeOptions.transportMode === 'driving' ? '自驾' : routeOptions.transportMode === 'public' ? '公共交通' : '打车'}
+                    </span>
                   </div>
 
-                  {route.dailyPlans.map((day, index) => (
-                    <div key={index} style={{ marginBottom: '16px', padding: '12px', background: '#fafafa', borderRadius: '4px' }}>
-                      <div style={{ fontWeight: '600', marginBottom: '8px' }}>
+                  {route.dailyPlans.map((day, dayIndex) => (
+                    <div key={dayIndex} style={{ marginBottom: '16px', padding: '12px', background: '#fafafa', borderRadius: '4px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #e8e8e8' }}>
                         第 {day.day} 天
                         <span style={{ fontSize: '12px', fontWeight: 'normal', marginLeft: '8px', color: '#666' }}>
                           {day.totalDistance.toFixed(1)} 公里 · {day.totalHours.toFixed(1)} 小时
                         </span>
                       </div>
+
                       {day.points.map((point, pIndex) => (
-                        <div key={pIndex} style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
-                          {pIndex + 1}. {point.name}
-                          {point.travelTime > 0 && (
-                            <span style={{ marginLeft: '8px', color: '#999' }}>
-                              (行驶 {point.travelTime.toFixed(1)} 小时)
-                            </span>
+                        <div key={pIndex}>
+                          {/* 点位信息 */}
+                          <div style={{
+                            padding: '8px 12px',
+                            background: 'white',
+                            borderRadius: '4px',
+                            marginBottom: pIndex < day.points.length - 1 ? '4px' : '0',
+                            borderLeft: '3px solid #1890ff'
+                          }}>
+                            <div style={{ fontWeight: '500', fontSize: '14px' }}>
+                              {pIndex + 1}. {point.name}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                              {point.address}
+                            </div>
+                            {point.stayTime > 0 && (
+                              <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
+                                停留：{point.stayTime} 小时
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 点位之间的距离和时间信息 */}
+                          {pIndex < day.points.length - 1 && (
+                            <div style={{
+                              padding: '6px 12px',
+                              background: '#f0f8ff',
+                              borderRadius: '4px',
+                              marginBottom: '4px',
+                              display: 'flex',
+                              justifyContent: 'center',
+                              gap: '16px',
+                              fontSize: '12px',
+                              color: '#1890ff'
+                            }}>
+                              <span>↓ {day.points[pIndex + 1].travelDistance?.toFixed(1) || '—'} 公里</span>
+                              <span>↓ {day.points[pIndex + 1].travelTime?.toFixed(1) || '—'} 小时</span>
+                            </div>
                           )}
                         </div>
                       ))}
