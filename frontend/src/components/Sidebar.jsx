@@ -180,6 +180,13 @@ function Sidebar({
           >
             总结报告
           </button>
+          <button
+            className={`btn ${activeTab === 'learning' ? 'btn-primary' : 'btn-default'}`}
+            style={{ flex: 1, borderRadius: '4px 4px 0 0', minWidth: '80px' }}
+            onClick={() => onTabChange('learning')}
+          >
+            学习进化
+          </button>
         </div>
 
         {/* 点位管理 */}

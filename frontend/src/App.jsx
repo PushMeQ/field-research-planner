@@ -5,6 +5,7 @@ import PointDetail from './components/PointDetail'
 import VersionManager from './components/VersionManager'
 import ActualTripRecorder from './components/ActualTripRecorder'
 import SummaryReport from './components/SummaryReport'
+import LearningReport from './components/LearningReport'
 import { getPoints, savePoints, getRoute, saveRoute, createProject, getProjects } from './utils/api'
 
 function App() {
@@ -234,6 +235,13 @@ function App() {
         {activeTab === 'summary' && (
           <div style={{ padding: '20px', height: '100%', overflowY: 'auto' }}>
             <SummaryReport
+              projectId={project?.projectId}
+            />
+          </div>
+        )}
+        {activeTab === 'learning' && (
+          <div style={{ padding: '20px', height: '100%', overflowY: 'auto' }}>
+            <LearningReport
               projectId={project?.projectId}
             />
           </div>

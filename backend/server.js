@@ -1291,6 +1291,483 @@ function generateSuggestions(statistics) {
   return suggestions.map(s => `<li>${s}</li>`).join('\n            ');
 }
 
+// ==================== 学习报告 API ====================
+
+// 学习报告目录
+const LEARNING_DIR = path.join(__dirname, '..', 'learning-data');
+
+// 确保学习目录存在
+async function ensureLearningDir() {
+  try {
+    await fs.access(LEARNING_DIR);
+  } catch {
+    await fs.mkdir(LEARNING_DIR, { recursive: true });
+  }
+}
+
+// 生成学习报告
+app.post('/api/projects/:projectId/learning', async (req, res) => {
+  try {
+    await ensureLearningDir();
+
+    const { projectId } = req.params;
+    const projectDir = path.join(PROJECTS_ROOT, projectId);
+
+    // 读取项目元数据
+    const metadataPath = path.join(projectDir, 'metadata.json');
+    const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
+
+    // 读取最新版本数据
+    const versionsDir = path.join(projectDir, 'versions');
+    const versionDirs = await fs.readdir(versionsDir);
+    let latestVersion = null;
+
+    for (const dir of versionDirs) {
+      if (dir.startsWith('v')) {
+        const dataPath = path.join(versionsDir, dir, 'data.json');
+        try {
+          const data = JSON.parse(await fs.readFile(dataPath, 'utf-8'));
+          if (!latestVersion || data.version > latestVersion.version) {
+            latestVersion = data;
+          }
+        } catch {
+          // 忽略无效的版本
+        }
+      }
+    }
+
+    // 读取所有实际行程记录
+    const actualDir = path.join(projectDir, 'actual');
+    const actualFiles = await fs.readdir(actualDir);
+    const actualRecords = [];
+
+    for (const file of actualFiles) {
+      if (file.endsWith('.json')) {
+        try {
+          const filePath = path.join(actualDir, file);
+          const data = JSON.parse(await fs.readFile(filePath, 'utf-8'));
+          actualRecords.push(data);
+        } catch {
+          // 忽略无效的文件
+        }
+      }
+    }
+
+    // 计算统计数据
+    const statistics = calculateStatistics(latestVersion, actualRecords);
+
+    // 提取用户习惯和经验
+    const userHabits = extractUserHabits(actualRecords, latestVersion);
+
+    // 生成学习报告
+    const learningReport = {
+      projectId,
+      projectName: metadata.name,
+      generatedAt: new Date().toISOString(),
+      statistics,
+      userHabits,
+      lessons: generateLessons(statistics, userHabits),
+      recommendations: generateRecommendations(statistics, userHabits)
+    };
+
+    // 保存学习报告
+    const reportFileName = `learning-${projectId}-${Date.now()}.json`;
+    const reportPath = path.join(LEARNING_DIR, reportFileName);
+    await fs.writeFile(reportPath, JSON.stringify(learningReport, null, 2));
+
+    // 更新用户画像
+    await updateUserProfile(userHabits, statistics);
+
+    return res.json({
+      success: true,
+      data: {
+        reportPath,
+        learningReport
+      }
+    });
+  } catch (error) {
+    console.error('生成学习报告错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '生成学习报告失败'
+    });
+  }
+});
+
+// 提取用户习惯
+function extractUserHabits(actualRecords, plannedVersion) {
+  const habits = {
+    preferredPointsPerDay: 0,
+    preferredHoursPerDay: 0,
+    preferredStayTime: 0,
+    commonNotes: [],
+    timePatterns: {
+      averageArrivalTime: '',
+      averageDepartureTime: '',
+      preferredStartTime: ''
+    },
+    routePreferences: {
+      preferHighways: false,
+      avoidTolls: false,
+      preferScenicRoutes: false
+    }
+  };
+
+  if (actualRecords.length === 0) {
+    return habits;
+  }
+
+  // 计算平均每日点位数
+  const totalPoints = actualRecords.reduce((sum, record) => sum + (record.pointsVisited || []).length, 0);
+  habits.preferredPointsPerDay = totalPoints / actualRecords.length;
+
+  // 计算平均每日工作时长
+  const totalHours = actualRecords.reduce((sum, record) => sum + (record.totalHours || 0), 0);
+  habits.preferredHoursPerDay = totalHours / actualRecords.length;
+
+  // 提取常见备注
+  const allNotes = [];
+  actualRecords.forEach(record => {
+    if (record.notes) {
+      allNotes.push(record.notes);
+    }
+    (record.pointsVisited || []).forEach(point => {
+      if (point.notes) {
+        allNotes.push(point.notes);
+      }
+    });
+  });
+
+  // 统计常见关键词
+  const noteKeywords = {};
+  allNotes.forEach(note => {
+    const words = note.split(/[,，。.、\s]+/).filter(w => w.length > 1);
+    words.forEach(word => {
+      noteKeywords[word] = (noteKeywords[word] || 0) + 1;
+    });
+  });
+
+  // 提取前 10 个常见备注
+  habits.commonNotes = Object.entries(noteKeywords)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([word, count]) => ({ word, count }));
+
+  // 提取时间模式
+  const arrivalTimes = [];
+  const departureTimes = [];
+
+  actualRecords.forEach(record => {
+    (record.pointsVisited || []).forEach(point => {
+      if (point.arrivalTime) {
+        arrivalTimes.push(point.arrivalTime);
+      }
+      if (point.departureTime) {
+        departureTimes.push(point.departureTime);
+      }
+    });
+  });
+
+  if (arrivalTimes.length > 0) {
+    habits.timePatterns.averageArrivalTime = calculateAverageTime(arrivalTimes);
+  }
+
+  if (departureTimes.length > 0) {
+    habits.timePatterns.averageDepartureTime = calculateAverageTime(departureTimes);
+  }
+
+  return habits;
+}
+
+// 计算平均时间
+function calculateAverageTime(times) {
+  const minutes = times.map(time => {
+    const [hours, mins] = time.split(':').map(Number);
+    return hours * 60 + mins;
+  });
+
+  const avgMinutes = minutes.reduce((sum, m) => sum + m, 0) / minutes.length;
+  const hours = Math.floor(avgMinutes / 60);
+  const mins = Math.round(avgMinutes % 60);
+
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}
+
+// 生成经验教训
+function generateLessons(statistics, userHabits) {
+  const lessons = [];
+
+  // 基于统计数据的经验
+  if (statistics.completionRate > 100) {
+    lessons.push({
+      type: 'positive',
+      category: 'planning',
+      lesson: '计划较为保守，可以适当增加每日点位数量',
+      evidence: `完成率 ${statistics.completionRate.toFixed(1)}%`
+    });
+  } else if (statistics.completionRate < 80) {
+    lessons.push({
+      type: 'improvement',
+      category: 'planning',
+      lesson: '计划过于激进，需要减少每日点位或增加天数',
+      evidence: `完成率仅 ${statistics.completionRate.toFixed(1)}%`
+    });
+  }
+
+  // 基于时间模式的经验
+  if (userHabits.timePatterns.averageArrivalTime > '09:30') {
+    lessons.push({
+      type: 'observation',
+      category: 'schedule',
+      lesson: '用户习惯较晚出发，建议将第一个点位安排在 10:00 之后',
+      evidence: `平均到达时间 ${userHabits.timePatterns.averageArrivalTime}`
+    });
+  }
+
+  // 基于工作时长的经验
+  if (userHabits.preferredHoursPerDay > 10) {
+    lessons.push({
+      type: 'improvement',
+      category: 'workload',
+      lesson: '每日工作时长过长，建议控制在 8 小时以内',
+      evidence: `平均每日工作 ${userHabits.preferredHoursPerDay.toFixed(1)} 小时`
+    });
+  }
+
+  // 基于点位数量的经验
+  if (userHabits.preferredPointsPerDay > 3) {
+    lessons.push({
+      type: 'observation',
+      category: 'efficiency',
+      lesson: '用户效率较高，可以适当增加每日点位数量',
+      evidence: `平均每日完成 ${userHabits.preferredPointsPerDay.toFixed(1)} 个点位`
+    });
+  }
+
+  return lessons;
+}
+
+// 生成个性化建议
+function generateRecommendations(statistics, userHabits) {
+  const recommendations = [];
+
+  // 基于用户习惯的建议
+  if (userHabits.preferredPointsPerDay > 0) {
+    recommendations.push({
+      category: 'planning',
+      recommendation: `建议每日安排 ${Math.round(userHabits.preferredPointsPerDay)} 个点位`,
+      reason: '基于用户历史完成情况'
+    });
+  }
+
+  if (userHabits.preferredHoursPerDay > 0) {
+    recommendations.push({
+      category: 'schedule',
+      recommendation: `建议每日工作 ${Math.round(userHabits.preferredHoursPerDay)} 小时`,
+      reason: '基于用户历史工作时长'
+    });
+  }
+
+  if (userHabits.timePatterns.averageArrivalTime) {
+    recommendations.push({
+      category: 'schedule',
+      recommendation: `建议第一个点位安排在 ${userHabits.timePatterns.averageArrivalTime} 之后`,
+      reason: '基于用户历史到达时间'
+    });
+  }
+
+  // 基于统计数据的建议
+  if (statistics.averages.distancePerDay > 200) {
+    recommendations.push({
+      category: 'route',
+      recommendation: '建议优化路线，减少每日行驶里程',
+      reason: `平均每日行驶 ${statistics.averages.distancePerDay.toFixed(1)} 公里，建议控制在 150 公里以内`
+    });
+  }
+
+  return recommendations;
+}
+
+// 更新用户画像
+async function updateUserProfile(userHabits, statistics) {
+  const profilePath = path.join(LEARNING_DIR, 'user-profile.json');
+
+  let profile = {
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    totalProjects: 0,
+    averageCompletionRate: 0,
+    preferredSettings: {
+      pointsPerDay: 0,
+      hoursPerDay: 0,
+      stayTime: 0
+    },
+    habits: []
+  };
+
+  try {
+    const existingProfile = await fs.readFile(profilePath, 'utf-8');
+    profile = JSON.parse(existingProfile);
+  } catch {
+    // 文件不存在，使用默认值
+  }
+
+  // 更新统计数据
+  profile.totalProjects += 1;
+  profile.averageCompletionRate = (
+    (profile.averageCompletionRate * (profile.totalProjects - 1) + statistics.completionRate) /
+    profile.totalProjects
+  );
+
+  // 更新偏好设置（移动平均）
+  const alpha = 0.3; // 学习率
+  profile.preferredSettings.pointsPerDay = (
+    profile.preferredSettings.pointsPerDay * (1 - alpha) +
+    userHabits.preferredPointsPerDay * alpha
+  );
+
+  profile.preferredSettings.hoursPerDay = (
+    profile.preferredSettings.hoursPerDay * (1 - alpha) +
+    userHabits.preferredHoursPerDay * alpha
+  );
+
+  // 添加新的习惯记录
+  profile.habits.push({
+    date: new Date().toISOString(),
+    pointsPerDay: userHabits.preferredPointsPerDay,
+    hoursPerDay: userHabits.preferredHoursPerDay,
+    completionRate: statistics.completionRate
+  });
+
+  // 只保留最近 10 次记录
+  if (profile.habits.length > 10) {
+    profile.habits = profile.habits.slice(-10);
+  }
+
+  profile.updatedAt = new Date().toISOString();
+
+  await fs.writeFile(profilePath, JSON.stringify(profile, null, 2));
+}
+
+// 获取用户画像
+app.get('/api/user/profile', async (req, res) => {
+  try {
+    await ensureLearningDir();
+
+    const profilePath = path.join(LEARNING_DIR, 'user-profile.json');
+    const profile = JSON.parse(await fs.readFile(profilePath, 'utf-8'));
+
+    return res.json({
+      success: true,
+      data: profile
+    });
+  } catch (error) {
+    console.error('获取用户画像错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '获取用户画像失败'
+    });
+  }
+});
+
+// 获取学习报告列表
+app.get('/api/learning/reports', async (req, res) => {
+  try {
+    await ensureLearningDir();
+
+    const files = await fs.readdir(LEARNING_DIR);
+    const reports = [];
+
+    for (const file of files) {
+      if (file.startsWith('learning-') && file.endsWith('.json')) {
+        try {
+          const filePath = path.join(LEARNING_DIR, file);
+          const data = JSON.parse(await fs.readFile(filePath, 'utf-8'));
+          reports.push(data);
+        } catch {
+          // 忽略无效的文件
+        }
+      }
+    }
+
+    // 按时间排序
+    reports.sort((a, b) => new Date(b.generatedAt) - new Date(a.generatedAt));
+
+    return res.json({
+      success: true,
+      data: reports
+    });
+  } catch (error) {
+    console.error('获取学习报告列表错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '获取学习报告列表失败'
+    });
+  }
+});
+
+// 获取个性化建议
+app.get('/api/user/recommendations', async (req, res) => {
+  try {
+    await ensureLearningDir();
+
+    const profilePath = path.join(LEARNING_DIR, 'user-profile.json');
+    let profile = null;
+
+    try {
+      profile = JSON.parse(await fs.readFile(profilePath, 'utf-8'));
+    } catch {
+      // 用户画像不存在
+    }
+
+    const recommendations = [];
+
+    if (profile) {
+      // 基于用户画像生成建议
+      if (profile.preferredSettings.pointsPerDay > 0) {
+        recommendations.push({
+          category: 'planning',
+          suggestion: `建议每日安排 ${Math.round(profile.preferredSettings.pointsPerDay)} 个点位`,
+          confidence: 0.8,
+          basedOn: `基于 ${profile.totalProjects} 个项目的历史数据`
+        });
+      }
+
+      if (profile.preferredSettings.hoursPerDay > 0) {
+        recommendations.push({
+          category: 'schedule',
+          suggestion: `建议每日工作 ${Math.round(profile.preferredSettings.hoursPerDay)} 小时`,
+          confidence: 0.8,
+          basedOn: `基于 ${profile.totalProjects} 个项目的历史数据`
+        });
+      }
+
+      if (profile.averageCompletionRate > 0) {
+        recommendations.push({
+          category: 'planning',
+          suggestion: `历史平均完成率 ${profile.averageCompletionRate.toFixed(1)}%，可作为规划参考`,
+          confidence: 0.9,
+          basedOn: `基于 ${profile.totalProjects} 个项目的统计数据`
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        hasHistory: profile !== null,
+        recommendations
+      }
+    });
+  } catch (error) {
+    console.error('获取个性化建议错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '获取个性化建议失败'
+    });
+  }
+});
+
 // 启动服务器
 app.listen(PORT, () => {
   console.log(`后端服务已启动，端口: ${PORT}`);

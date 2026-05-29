@@ -186,6 +186,50 @@ export const generateSummary = async (projectId) => {
   }
 }
 
+// 生成学习报告
+export const generateLearningReport = async (projectId) => {
+  try {
+    const response = await api.post(`/projects/${projectId}/learning`)
+    return response.data
+  } catch (error) {
+    console.error('生成学习报告失败:', error)
+    throw error
+  }
+}
+
+// 获取用户画像
+export const getUserProfile = async () => {
+  try {
+    const response = await api.get('/user/profile')
+    return response.data
+  } catch (error) {
+    console.error('获取用户画像失败:', error)
+    throw error
+  }
+}
+
+// 获取学习报告列表
+export const getLearningReports = async () => {
+  try {
+    const response = await api.get('/learning/reports')
+    return response.data
+  } catch (error) {
+    console.error('获取学习报告列表失败:', error)
+    throw error
+  }
+}
+
+// 获取个性化建议
+export const getUserRecommendations = async () => {
+  try {
+    const response = await api.get('/user/recommendations')
+    return response.data
+  } catch (error) {
+    console.error('获取个性化建议失败:', error)
+    throw error
+  }
+}
+
 // ==================== 本地存储操作 ====================
 
 export const getPoints = () => {
