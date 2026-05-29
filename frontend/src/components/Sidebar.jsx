@@ -7,7 +7,9 @@ function Sidebar({
   loading,
   error,
   project,
+  projects,
   activeTab,
+  showProjectList,
   onAddPoint,
   onDeletePoint,
   onReorderPoints,
@@ -15,7 +17,9 @@ function Sidebar({
   onSelectPoint,
   onClearAll,
   onCreateProject,
-  onTabChange
+  onTabChange,
+  onSwitchProject,
+  onShowProjectList
 }) {
   const [newPoint, setNewPoint] = useState({ name: '', address: '' })
   const [routeOptions, setRouteOptions] = useState({
@@ -198,12 +202,54 @@ function Sidebar({
     setLoading(true)
 
     try {
-      // 逐个添加点位（会调用地理编码 API）
-      for (const point of importPreview) {
-        await onAddPoint(point)
+      // 批量调用地理编码 API
+      const addresses = importPreview.map(p => p.address)
+      const response = await fetch('/api/geocode/batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ addresses })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // 将成功的结果转换为点位格式
+        const newPoints = []
+        for (let i = 0; i < result.data.length; i++) {
+          const geocode = result.data[i]
+          if (geocode.success) {
+            newPoints.push({
+              id: Date.now() + i,
+              name: importPreview[i].name,
+              address: geocode.data.address,
+              province: geocode.data.province,
+              city: geocode.data.city,
+              district: geocode.data.district,
+              lat: parseFloat(geocode.data.location.split(',')[1]),
+              lng: parseFloat(geocode.data.location.split(',')[0]),
+              level: geocode.data.level
+            })
+          }
+        }
+
+        // 一次性添加所有点位
+        if (newPoints.length > 0) {
+          onReorderPoints([...points, ...newPoints])
+          alert(`成功导入 ${newPoints.length} 个点位`)
+        }
+
+        if (newPoints.length < importPreview.length) {
+          alert(`${importPreview.length - newPoints.length} 个点位地理编码失败`)
+        }
+      } else {
+        alert('批量地理编码失败：' + result.error)
       }
+
       setImportPreview([])
       setImportFile(null)
+      setImportText('')
     } catch (err) {
       alert('导入过程中出现错误：' + err.message)
     } finally {
@@ -252,7 +298,71 @@ function Sidebar({
         )}
 
         {/* 项目管理 */}
-        {!project && (
+        {showProjectList ? (
+          <div className="card" style={{ marginBottom: '16px' }}>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>项目列表</span>
+              <button
+                className="btn btn-default"
+                style={{ padding: '2px 8px', fontSize: '12px' }}
+                onClick={() => onShowProjectList(false)}
+              >
+                返回
+              </button>
+            </div>
+            <div className="card-body">
+              {projects.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                  暂无项目
+                </div>
+              ) : (
+                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {projects.map((p) => (
+                    <div
+                      key={p.projectId}
+                      style={{
+                        padding: '12px',
+                        marginBottom: '8px',
+                        background: project?.projectId === p.projectId ? '#e6f7ff' : '#fafafa',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        border: project?.projectId === p.projectId ? '1px solid #1890ff' : '1px solid transparent'
+                      }}
+                      onClick={() => onSwitchProject(p.projectId)}
+                    >
+                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>{p.name}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        {p.province && `${p.province} · `}
+                        创建于 {new Date(p.createdAt).toLocaleDateString('zh-CN')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ marginTop: '12px', borderTop: '1px solid #f0f0f0', paddingTop: '12px' }}>
+                <div className="form-group">
+                  <label className="form-label">新建项目</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="输入项目名称"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                  />
+                </div>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: '100%' }}
+                  onClick={handleCreateProject}
+                  disabled={loading || !projectName.trim()}
+                >
+                  {loading ? '创建中...' : '创建新项目'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : !project ? (
           <div className="card" style={{ marginBottom: '16px' }}>
             <div className="card-header">创建项目</div>
             <div className="card-body">
@@ -276,13 +386,23 @@ function Sidebar({
               </button>
             </div>
           </div>
-        )}
-
-        {project && (
-          <div style={{ marginBottom: '16px', padding: '12px', background: '#e6f7ff', borderRadius: '4px' }}>
-            <div style={{ fontWeight: '600', marginBottom: '4px' }}>{project.name}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>
-              项目 ID: {project.projectId}
+        ) : (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ padding: '12px', background: '#e6f7ff', borderRadius: '4px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontWeight: '600' }}>{project.name}</span>
+                <button
+                  className="btn btn-default"
+                  style={{ padding: '2px 8px', fontSize: '12px' }}
+                  onClick={() => onShowProjectList(true)}
+                >
+                  切换项目
+                </button>
+              </div>
+              <div style={{ fontSize: '12px', color: '#666' }}>
+                {project.province && `${project.province} · `}
+                项目 ID: {project.projectId}
+              </div>
             </div>
           </div>
         )}

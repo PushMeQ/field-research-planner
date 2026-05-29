@@ -15,13 +15,16 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [project, setProject] = useState(null)
+  const [projects, setProjects] = useState([])
   const [activeTab, setActiveTab] = useState('map') // map, version, actual, summary
+  const [showProjectList, setShowProjectList] = useState(false)
 
   // 加载保存的数据
   useEffect(() => {
     const savedPoints = localStorage.getItem('field-research-points')
     const savedRoute = localStorage.getItem('field-research-route')
     const savedProject = localStorage.getItem('field-research-project')
+    const savedProjects = localStorage.getItem('field-research-projects')
 
     if (savedPoints) {
       setPoints(JSON.parse(savedPoints))
@@ -32,6 +35,12 @@ function App() {
     if (savedProject) {
       setProject(JSON.parse(savedProject))
     }
+    if (savedProjects) {
+      setProjects(JSON.parse(savedProjects))
+    }
+
+    // 从服务器加载项目列表
+    loadProjects()
   }, [])
 
   // 保存数据到本地存储
@@ -52,6 +61,57 @@ function App() {
       localStorage.setItem('field-research-project', JSON.stringify(project))
     }
   }, [project])
+
+  useEffect(() => {
+    if (projects.length > 0) {
+      localStorage.setItem('field-research-projects', JSON.stringify(projects))
+    }
+  }, [projects])
+
+  // 加载项目列表
+  const loadProjects = async () => {
+    try {
+      const result = await getProjects()
+      if (result.success) {
+        setProjects(result.data)
+      }
+    } catch (err) {
+      console.error('加载项目列表失败:', err)
+    }
+  }
+
+  // 切换项目
+  const handleSwitchProject = (projectId) => {
+    const selectedProject = projects.find(p => p.projectId === projectId)
+    if (selectedProject) {
+      setProject(selectedProject)
+      setShowProjectList(false)
+
+      // 加载该项目的点位和路线
+      const savedPoints = localStorage.getItem(`field-research-points-${projectId}`)
+      const savedRoute = localStorage.getItem(`field-research-route-${projectId}`)
+
+      if (savedPoints) {
+        setPoints(JSON.parse(savedPoints))
+      } else {
+        setPoints([])
+      }
+
+      if (savedRoute) {
+        setRoute(JSON.parse(savedRoute))
+      } else {
+        setRoute(null)
+      }
+    }
+  }
+
+  // 保存当前项目数据
+  const saveCurrentProjectData = () => {
+    if (project) {
+      localStorage.setItem(`field-research-points-${project.projectId}`, JSON.stringify(points))
+      localStorage.setItem(`field-research-route-${project.projectId}`, JSON.stringify(route))
+    }
+  }
 
   // 添加点位
   const handleAddPoint = async (pointData) => {
@@ -155,6 +215,9 @@ function App() {
       setLoading(true)
       setError(null)
 
+      // 保存当前项目数据
+      saveCurrentProjectData()
+
       const result = await createProject({
         name: projectName,
         province: '',
@@ -163,6 +226,12 @@ function App() {
 
       if (result.success) {
         setProject(result.data)
+        setPoints([])
+        setRoute(null)
+        setShowProjectList(false)
+
+        // 更新项目列表
+        await loadProjects()
       }
     } catch (err) {
       setError('创建项目失败：' + err.message)
@@ -180,7 +249,9 @@ function App() {
         loading={loading}
         error={error}
         project={project}
+        projects={projects}
         activeTab={activeTab}
+        showProjectList={showProjectList}
         onAddPoint={handleAddPoint}
         onDeletePoint={handleDeletePoint}
         onReorderPoints={handleReorderPoints}
@@ -189,6 +260,8 @@ function App() {
         onClearAll={handleClearAll}
         onCreateProject={handleCreateProject}
         onTabChange={setActiveTab}
+        onSwitchProject={handleSwitchProject}
+        onShowProjectList={setShowProjectList}
       />
       <div style={{ flex: 1, position: 'relative' }}>
         {activeTab === 'map' && (
