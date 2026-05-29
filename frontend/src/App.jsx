@@ -281,7 +281,7 @@ function App() {
           )}
         </div>
 
-        {/* 其他内容覆盖在地图上方 */}
+        {/* 其他内容覆盖在地图上方 - 完全不透明 */}
         {activeTab !== 'map' && (
           <div style={{
             position: 'absolute',
@@ -289,7 +289,7 @@ function App() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(255, 255, 255, 0.95)',
+            background: 'white',
             overflowY: 'auto',
             padding: '20px',
             zIndex: 1000
