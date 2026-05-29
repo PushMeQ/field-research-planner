@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>{{PROJECT_TITLE}} - 交互式路线图</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif; background:#f0f2f5; color:#2c3e50; line-height:1.6; }
+.container { max-width:800px; margin:0 auto; padding:0 0 40px 0; }
+
+.hero { background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%); color:#fff; padding:32px 20px; text-align:center; }
+.hero h1 { font-size:22px; margin-bottom:6px; letter-spacing:2px; }
+.hero .sub { font-size:13px; opacity:0.8; }
+.hero .dates { font-size:14px; margin-top:8px; padding:6px 16px; background:rgba(255,255,255,0.12); border-radius:20px; display:inline-block; }
+
+.section { background:#fff; margin:12px 12px; border-radius:12px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+.section h3 { font-size:16px; margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid #E74C3C; display:flex; align-items:center; gap:6px; }
+
+.overview-map { width:100%; height:480px; border-radius:8px; overflow:hidden; border:1px solid #e0e0e0; background:#f0f0f0; min-height:480px; }
+
+.day-card { background:#fff; margin:12px 12px; border-radius:12px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-left:4px solid #E74C3C; }
+.day-header { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
+.day-badge { background:#E74C3C; color:#fff; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold; }
+.day-date { font-size:13px; color:#666; }
+.day-drive { font-size:12px; color:#888; background:#f0f0f0; padding:2px 8px; border-radius:8px; }
+.day-count { font-size:12px; font-weight:bold; color:#E74C3C; }
+.day-card h2 { font-size:16px; margin-bottom:8px; }
+.points-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.point-tag { background:#fff3cd; color:#856404; padding:3px 10px; border-radius:10px; font-size:11px; border:1px solid #ffc107; }
+.day-map { width:100%; height:300px; border-radius:8px; overflow:hidden; margin-bottom:10px; border:1px solid #e0e0e0; background:#f0f0f0; min-height:300px; }
+.detail-list { font-size:13px; padding-left:20px; margin-bottom:8px; }
+.detail-list li { margin-bottom:3px; }
+.hotel-line { font-size:12px; color:#888; background:#f8f9fa; padding:8px 10px; border-radius:6px; margin-top:6px; }
+
+.footer { text-align:center; padding:24px; font-size:12px; color:#999; }
+.footer p { margin:4px 0; }
+.legend-box { background:white; padding:10px 14px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.12); font-size:11px; line-height:1.8; }
+
+@media (max-width:600px) {
+  .hero h1 { font-size:18px; }
+  .section { margin:8px 8px; padding:12px; }
+  .day-card { margin:8px 8px; padding:12px; }
+  .day-map { height:220px; }
+  .overview-map { height:320px; }
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>{{PROJECT_TITLE}}</h1>
+  <div class="sub">{{PROJECT_SUBTITLE}}</div>
+  <div class="dates">{{PROJECT_DATE_RANGE}}</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// 初始化每日地图
+function initDayMap(mapId, markers, route) {
+    var container = document.getElementById(mapId);
+    if (!container) return;
+    container.style.width = '100%';
+    container.style.height = '300px';
+    var m = L.map(mapId, {scrollWheelZoom: false, attributionControl: false, zoomControl: true});
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+        subdomains: '1234', maxZoom: 18
+    }).addTo(m);
+    var allCoords = [];
+    if (route && route.length >= 2) {
+        L.polyline(route, {color: '#E74C3C', weight: 3.5, opacity: 0.75}).addTo(m);
+        allCoords = route.slice();
+    }
+    markers.forEach(function(mk) {
+        var latlng = [mk.lat, mk.lng];
+        allCoords.push(latlng);
+        var color, letter, size;
+        if (mk.type === 'survey') { color = '#E74C3C'; letter = '●'; size = 20; }
+        else if (mk.type === 'hotel') { color = '#1a1a2e'; letter = '◆'; size = 24; }
+        else if (mk.type === 'start') { color = '#27ae60'; letter = '▶'; size = 20; }
+        else { color = '#888'; letter = '●'; size = 16; }
+        var icon = L.divIcon({
+            html: '<div style="background:'+color+';color:#fff;width:'+size+'px;height:'+size+'px;border-radius:50%;text-align:center;line-height:'+size+'px;font-size:11px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);">'+letter+'</div>',
+            iconSize: [size, size], iconAnchor: [size/2, size/2]
+        });
+        L.marker(latlng, {icon: icon}).bindPopup('<b>'+mk.label+'</b>').addTo(m);
+    });
+    if (allCoords.length > 0) { m.fitBounds(allCoords, {padding: [30, 30]}); }
+    setTimeout(function() { m.invalidateSize(); }, 500);
+    setTimeout(function() { m.invalidateSize(); if (allCoords.length > 0) { m.fitBounds(allCoords, {padding: [30, 30]}); } }, 1500);
+}
+
+// 初始化全程路线总览地图
+function initOverviewMap(data, hotelCoords) {
+    var container = document.getElementById('overview-map');
+    if (container) { container.style.width = '100%'; container.style.height = '480px'; }
+    var m = L.map('overview-map', {scrollWheelZoom: false, attributionControl: false, zoomControl: true});
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+        subdomains: '1234', maxZoom: 18
+    }).addTo(m);
+    var colors = ['#E74C3C','#E67E22','#F1C40F','#2ECC71','#3498DB','#9B59B6','#E91E63','#00BCD4','#795548','#FF5722','#607D8B','#3F51B5'];
+    var allBounds = [];
+    data.forEach(function(d, di) {
+        var color = colors[di % colors.length];
+        if (d.route && d.route.length >= 2) {
+            L.polyline(d.route, {color: color, weight: 3, opacity: 0.65}).bindPopup('<b>'+d.title+'</b>').addTo(m);
+            allBounds = allBounds.concat(d.route);
+        }
+        d.markers.forEach(function(mk) {
+            if (mk.type === 'survey') {
+                var latlng = [mk.lat, mk.lng]; allBounds.push(latlng);
+                var nm = mk.label.match(/#(\d+)/);
+                var ovLetter = nm ? nm[1] : '●';
+                L.marker(latlng, {icon: L.divIcon({
+                    html: '<div style="background:'+color+';color:#fff;width:16px;height:16px;border-radius:50%;text-align:center;line-height:16px;font-size:9px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+ovLetter+'</div>',
+                    iconSize: [16,16], iconAnchor: [8,8]
+                })}).bindPopup('<b>'+mk.label+'</b><br><small>'+d.title+'</small>').addTo(m);
+            }
+        });
+    });
+    hotelCoords.forEach(function(h) {
+        L.circleMarker([h[0],h[1]], {radius:7, color:'#1a1a2e',fillColor:'#1a1a2e',fillOpacity:0.85,weight:2.5}).bindPopup('<b> '+h[2]+'</b>').addTo(m);
+        allBounds.push([h[0],h[1]]);
+    });
+    if (allBounds.length > 0) { m.fitBounds(allBounds, {padding:[20,20]}); }
+    var legend = L.control({position:'bottomright'});
+    legend.onAdd = function() {
+        var div = L.DomUtil.create('div','legend-box');
+        div.innerHTML = '<b>图例</b><br><span style="color:#E74C3C;">●</span> 调查点<br><span style="color:#1a1a2e;">◆</span> 住宿酒店';
+        return div;
+    };
+    legend.addTo(m);
+    setTimeout(function() { m.invalidateSize(); }, 500);
+    setTimeout(function() { m.invalidateSize(); if (allBounds.length > 0) { m.fitBounds(allBounds, {padding:[20,20]}); } }, 1500);
+}
+</script>
+
+<!-- 全程路线总览 -->
+<div class="section">
+  <h3>全程路线总览</h3>
+  <div class="overview-map" id="overview-map"></div>
+  <p style="font-size:11px;color:#999;margin-top:8px;">红色标记=调查点 · 黑色标记=住宿酒店</p>
+</div>
+
+<!-- 逐日详细行程 -->
+<div class="section" style="background:#f8f9fa;">
+  <h3>逐日详细行程</h3>
+</div>
+
+{{DAILY_CARDS}}
+
+<div class="footer">
+  <p>生成时间：{{GENERATED_AT}}</p>
+  <p>田野调查行程规划 - 由 Claude Code 生成</p>
+</div>
+
+</body>
+</html>
