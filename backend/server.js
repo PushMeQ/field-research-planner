@@ -165,6 +165,84 @@ app.post('/api/geocode/batch', async (req, res) => {
   }
 });
 
+// 查询两点之间的实际距离和时间（使用高德地图 API）
+app.post('/api/route/distance', async (req, res) => {
+  try {
+    const { origin, destination, transportMode } = req.body;
+
+    if (!origin || !destination) {
+      return res.status(400).json({ error: '起点和终点不能为空' });
+    }
+
+    const axios = require('axios');
+
+    // 根据交通方式选择不同的 API
+    let apiUrl = '';
+    const originStr = `${origin.lng},${origin.lat}`;
+    const destStr = `${destination.lng},${destination.lat}`;
+
+    switch (transportMode) {
+      case 'driving':
+        // 驾车路线规划
+        apiUrl = `https://restapi.amap.com/v3/direction/driving?origin=${originStr}&destination=${destStr}&key=${AMAP_API_KEY}&extensions=base`;
+        break;
+      case 'public':
+        // 公共交通路线规划
+        apiUrl = `https://restapi.amap.com/v3/direction/transit/integrated?origin=${originStr}&destination=${destStr}&city=北京&key=${AMAP_API_KEY}&extensions=base`;
+        break;
+      case 'taxi':
+        // 打车路线规划（使用驾车 API 作为替代）
+        apiUrl = `https://restapi.amap.com/v3/direction/driving?origin=${originStr}&destination=${destStr}&key=${AMAP_API_KEY}&extensions=base`;
+        break;
+      default:
+        apiUrl = `https://restapi.amap.com/v3/direction/driving?origin=${originStr}&destination=${destStr}&key=${AMAP_API_KEY}&extensions=base`;
+    }
+
+    const response = await axios.get(apiUrl);
+
+    if (response.data.status === '1') {
+      let distance = 0;
+      let duration = 0;
+
+      if (transportMode === 'public' && response.data.route && response.data.route.transits) {
+        // 公共交通：取第一个方案
+        const transit = response.data.route.transits[0];
+        if (transit) {
+          distance = parseFloat(transit.distance) / 1000; // 转换为公里
+          duration = parseFloat(transit.duration) / 60; // 转换为分钟
+        }
+      } else if (response.data.route && response.data.route.paths) {
+        // 驾车/打车：取第一个方案
+        const path = response.data.route.paths[0];
+        if (path) {
+          distance = parseFloat(path.distance) / 1000; // 转换为公里
+          duration = parseFloat(path.duration) / 60; // 转换为分钟
+        }
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          distance: distance, // 公里
+          duration: duration, // 分钟
+          transportMode: transportMode
+        }
+      });
+    } else {
+      return res.json({
+        success: false,
+        error: '路线查询失败'
+      });
+    }
+  } catch (error) {
+    console.error('查询距离错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '查询距离服务异常'
+    });
+  }
+});
+
 // 路线规划
 app.post('/api/route/plan', async (req, res) => {
   try {
@@ -174,19 +252,73 @@ app.post('/api/route/plan', async (req, res) => {
       return res.status(400).json({ error: '至少需要 2 个点位' });
     }
 
-    // 计算点位之间的距离矩阵
+    // 使用高德地图 API 查询实际距离和时间
+    const axios = require('axios');
     const distanceMatrix = [];
+    const durationMatrix = [];
+
+    // 初始化矩阵
     for (let i = 0; i < points.length; i++) {
       distanceMatrix[i] = [];
+      durationMatrix[i] = [];
       for (let j = 0; j < points.length; j++) {
-        if (i === j) {
-          distanceMatrix[i][j] = 0;
-        } else {
-          const distance = geolib.getDistance(
-            { latitude: points[i].lat, longitude: points[i].lng },
-            { latitude: points[j].lat, longitude: points[j].lng }
-          );
-          distanceMatrix[i][j] = distance / 1000; // 转换为公里
+        distanceMatrix[i][j] = 0;
+        durationMatrix[i][j] = 0;
+      }
+    }
+
+    // 查询每对点位之间的实际距离和时间
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        try {
+          const originStr = `${points[i].lng},${points[i].lat}`;
+          const destStr = `${points[j].lng},${points[j].lat}`;
+
+          let apiUrl = '';
+          switch (transportMode) {
+            case 'driving':
+              apiUrl = `https://restapi.amap.com/v3/direction/driving?origin=${originStr}&destination=${destStr}&key=${AMAP_API_KEY}&extensions=base`;
+              break;
+            case 'public':
+              apiUrl = `https://restapi.amap.com/v3/direction/transit/integrated?origin=${originStr}&destination=${destStr}&city=北京&key=${AMAP_API_KEY}&extensions=base`;
+              break;
+            case 'taxi':
+              apiUrl = `https://restapi.amap.com/v3/direction/driving?origin=${originStr}&destination=${destStr}&key=${AMAP_API_KEY}&extensions=base`;
+              break;
+            default:
+              apiUrl = `https://restapi.amap.com/v3/direction/driving?origin=${originStr}&destination=${destStr}&key=${AMAP_API_KEY}&extensions=base`;
+          }
+
+          const response = await axios.get(apiUrl);
+
+          if (response.data.status === '1') {
+            let distance = 0;
+            let duration = 0;
+
+            if (transportMode === 'public' && response.data.route && response.data.route.transits) {
+              const transit = response.data.route.transits[0];
+              if (transit) {
+                distance = parseFloat(transit.distance) / 1000;
+                duration = parseFloat(transit.duration) / 60;
+              }
+            } else if (response.data.route && response.data.route.paths) {
+              const path = response.data.route.paths[0];
+              if (path) {
+                distance = parseFloat(path.distance) / 1000;
+                duration = parseFloat(path.duration) / 60;
+              }
+            }
+
+            distanceMatrix[i][j] = distance;
+            distanceMatrix[j][i] = distance;
+            durationMatrix[i][j] = duration;
+            durationMatrix[j][i] = duration;
+          }
+
+          // 添加延迟，避免触发 API 限制
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (err) {
+          console.error(`查询距离失败 (${i} -> ${j}):`, err);
         }
       }
     }
@@ -215,6 +347,7 @@ app.post('/api/route/plan', async (req, res) => {
       route,
       points,
       distanceMatrix,
+      durationMatrix,
       speed,
       dailyHours || 8,
       stayTime || 1
@@ -225,6 +358,7 @@ app.post('/api/route/plan', async (req, res) => {
       data: {
         route: route,
         distanceMatrix: distanceMatrix,
+        durationMatrix: durationMatrix,
         dailyPlans: dailyPlans,
         totalDistance: calculateTotalDistance(route, distanceMatrix),
         totalDays: dailyPlans.length
@@ -271,7 +405,7 @@ function solveTSP(distanceMatrix, n) {
 }
 
 // 计算每日行程
-function calculateDailyPlans(route, points, distanceMatrix, speed, dailyHours, stayTime) {
+function calculateDailyPlans(route, points, distanceMatrix, durationMatrix, speed, dailyHours, stayTime) {
   const plans = [];
   let currentDay = 1;
   let currentHour = 0;
@@ -286,13 +420,13 @@ function calculateDailyPlans(route, points, distanceMatrix, speed, dailyHours, s
     const pointIndex = route[i];
     const point = points[pointIndex];
 
-    // 计算到下一个点的距离和时间
+    // 计算到下一个点的距离和时间（使用实际数据）
     let travelTime = 0;
     let travelDistance = 0;
     if (i > 0) {
       const prevIndex = route[i - 1];
       travelDistance = distanceMatrix[prevIndex][pointIndex];
-      travelTime = travelDistance / speed;
+      travelTime = durationMatrix[prevIndex][pointIndex] / 60; // 转换为小时
     }
 
     // 检查是否超出每日时间限制
