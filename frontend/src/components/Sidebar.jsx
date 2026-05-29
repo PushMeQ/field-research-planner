@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 
 function Sidebar({
   points,
@@ -24,6 +24,10 @@ function Sidebar({
     stayTime: 1
   })
   const [projectName, setProjectName] = useState('')
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [importFile, setImportFile] = useState(null)
+  const [importPreview, setImportPreview] = useState([])
+  const fileInputRef = useRef(null)
 
   const handleAddPoint = () => {
     if (!newPoint.name || !newPoint.address) {
@@ -65,6 +69,102 @@ function Sidebar({
     }
     onCreateProject(projectName.trim())
     setProjectName('')
+  }
+
+  // 解析导入文件
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    setImportFile(file)
+    const reader = new FileReader()
+
+    reader.onload = (event) => {
+      const content = event.target.result
+      let points = []
+
+      if (file.name.endsWith('.csv')) {
+        // 解析 CSV 格式
+        const lines = content.split('\n').filter(line => line.trim())
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
+
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',').map(v => v.trim())
+          if (values.length >= 2) {
+            const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('名称') || h.includes('点位'))
+            const addrIdx = headers.findIndex(h => h.includes('address') || h.includes('地址') || h.includes('位置'))
+
+            points.push({
+              name: nameIdx >= 0 ? values[nameIdx] : values[0],
+              address: addrIdx >= 0 ? values[addrIdx] : values[1]
+            })
+          }
+        }
+      } else if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+        // 解析文本格式（每行一个点位，名称和地址用制表符或逗号分隔）
+        const lines = content.split('\n').filter(line => line.trim())
+        for (const line of lines) {
+          const parts = line.includes('\t') ? line.split('\t') : line.split(',')
+          if (parts.length >= 2) {
+            points.push({
+              name: parts[0].trim(),
+              address: parts[1].trim()
+            })
+          } else if (parts.length === 1 && parts[0].trim()) {
+            // 只有地址，没有名称
+            points.push({
+              name: `点位 ${points.length + 1}`,
+              address: parts[0].trim()
+            })
+          }
+        }
+      } else if (file.name.endsWith('.json')) {
+        // 解析 JSON 格式
+        try {
+          const data = JSON.parse(content)
+          if (Array.isArray(data)) {
+            points = data.map(item => ({
+              name: item.name || item.名称 || `点位 ${points.length + 1}`,
+              address: item.address || item.地址 || item.location || ''
+            }))
+          }
+        } catch (err) {
+          alert('JSON 文件格式错误')
+          return
+        }
+      } else {
+        alert('不支持的文件格式，请使用 CSV、TXT 或 JSON 文件')
+        return
+      }
+
+      setImportPreview(points)
+    }
+
+    reader.readAsText(file)
+  }
+
+  // 执行批量导入
+  const handleBatchImport = async () => {
+    if (importPreview.length === 0) {
+      alert('没有可导入的点位')
+      return
+    }
+
+    setShowImportDialog(false)
+    setLoading(true)
+
+    try {
+      // 逐个添加点位（会调用地理编码 API）
+      for (const point of importPreview) {
+        await onAddPoint(point)
+      }
+      setImportPreview([])
+      setImportFile(null)
+    } catch (err) {
+      alert('导入过程中出现错误：' + err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleImportData = (e) => {
@@ -216,16 +316,101 @@ function Sidebar({
                     onChange={(e) => setNewPoint(prev => ({ ...prev, address: e.target.value }))}
                   />
                 </div>
-                <button
-                  className="btn btn-primary"
-                  style={{ width: '100%' }}
-                  onClick={handleAddPoint}
-                  disabled={loading}
-                >
-                  {loading ? '地理编码中...' : '添加点位'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ flex: 1 }}
+                    onClick={handleAddPoint}
+                    disabled={loading}
+                  >
+                    {loading ? '地理编码中...' : '添加点位'}
+                  </button>
+                  <button
+                    className="btn btn-default"
+                    style={{ flex: 1 }}
+                    onClick={() => setShowImportDialog(true)}
+                  >
+                    批量导入
+                  </button>
+                </div>
               </div>
             </div>
+
+            {/* 批量导入对话框 */}
+            {showImportDialog && (
+              <div className="card" style={{ marginBottom: '16px' }}>
+                <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>批量导入点位</span>
+                  <button
+                    className="btn btn-default"
+                    style={{ padding: '2px 8px', fontSize: '12px' }}
+                    onClick={() => {
+                      setShowImportDialog(false)
+                      setImportPreview([])
+                      setImportFile(null)
+                    }}
+                  >
+                    关闭
+                  </button>
+                </div>
+                <div className="card-body">
+                  <div style={{ marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '4px', fontSize: '12px' }}>
+                    <p style={{ margin: '0 0 8px', fontWeight: '600' }}>支持的文件格式：</p>
+                    <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                      <li><strong>CSV</strong>：第一行为表头，包含"名称"和"地址"列</li>
+                      <li><strong>TXT</strong>：每行一个点位，名称和地址用制表符或逗号分隔</li>
+                      <li><strong>JSON</strong>：数组格式，每个对象包含 name 和 address 字段</li>
+                    </ul>
+                  </div>
+
+                  <input
+                    type="file"
+                    accept=".csv,.txt,.json,.md"
+                    onChange={handleFileSelect}
+                    style={{ display: 'none' }}
+                    ref={fileInputRef}
+                  />
+
+                  <button
+                    className="btn btn-default"
+                    style={{ width: '100%', marginBottom: '12px' }}
+                    onClick={() => fileInputRef.current.click()}
+                  >
+                    选择文件
+                  </button>
+
+                  {importFile && (
+                    <div style={{ marginBottom: '12px', fontSize: '12px', color: '#666' }}>
+                      已选择：{importFile.name}
+                    </div>
+                  )}
+
+                  {importPreview.length > 0 && (
+                    <div>
+                      <h4 style={{ margin: '0 0 8px', fontSize: '14px' }}>
+                        预览（{importPreview.length} 个点位）
+                      </h4>
+                      <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '12px' }}>
+                        {importPreview.map((point, index) => (
+                          <div key={index} style={{ padding: '8px', background: '#fafafa', borderRadius: '4px', marginBottom: '4px', fontSize: '12px' }}>
+                            <div style={{ fontWeight: '500' }}>{point.name}</div>
+                            <div style={{ color: '#666' }}>{point.address}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        className="btn btn-primary"
+                        style={{ width: '100%' }}
+                        onClick={handleBatchImport}
+                        disabled={loading}
+                      >
+                        {loading ? '导入中...' : `导入 ${importPreview.length} 个点位`}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* 点位列表 */}
             <div className="card">

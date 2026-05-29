@@ -2,6 +2,7 @@
 name: field-research-plan
 description: 田野调查行程规划 - 为田野调查（如古戏台考察）生成详细的行程规划，包括路线图、每日安排、考察点详情、版本管理、动态更新和总结汇报
 version: 2.0.0
+license: MIT-0
 metadata:
   openclaw:
     requires:
@@ -308,6 +309,10 @@ claw install field-research-plan
    ```bash
    export AMAP_API_KEY=your_key_here
    ```
+
+## 许可证
+
+本 Skill 使用 MIT-0 许可证发布。详见 [MIT-0 License](https://opensource.org/licenses/MIT-0)。
 
 ## 更新日志
 
