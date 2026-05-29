@@ -128,26 +128,8 @@ function MapComponent({ points, route, selectedPoint, onSelectPoint }) {
       dashArray: '10, 10'
     }).addTo(mapInstanceRef.current)
 
-    // 添加路线箭头
-    const arrowDecorator = L.polylineDecorator(routeLineRef.current, {
-      patterns: [
-        {
-          offset: '5%',
-          repeat: '10%',
-          symbol: L.Symbol.arrowHead({
-            pixelSize: 12,
-            polygon: false,
-            pathOptions: {
-              stroke: true,
-              color: '#1890ff',
-              weight: 3
-            }
-          })
-        }
-      ]
-    })
-
-    arrowDecorator.addTo(mapInstanceRef.current)
+    // 注意：路线箭头功能需要 leaflet-polylinedecorator 插件
+    // 暂时移除此功能以避免错误
   }, [route, points])
 
   return (
