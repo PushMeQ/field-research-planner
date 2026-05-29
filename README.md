@@ -1,6 +1,6 @@
 # 田野调查行程规划 Skill
 
-一个 Claude Code Skill，用于生成田野调查（如古戏台考察）的详细行程规划。
+一个支持 **Claude Code** 和 **OpenClaw** 的田野调查行程规划 Skill，用于生成田野调查（如古戏台考察）的详细行程规划。
 
 ## 功能特点
 
@@ -13,7 +13,9 @@
 
 ## 快速安装
 
-### Windows
+### Claude Code
+
+#### Windows
 
 ```powershell
 # 1. 克隆仓库
@@ -24,7 +26,7 @@ cd field-research-planner
 .\install.ps1
 ```
 
-### Mac/Linux
+#### Mac/Linux
 
 ```bash
 # 1. 克隆仓库
@@ -34,6 +36,27 @@ cd field-research-planner
 # 2. 运行安装脚本
 chmod +x install.sh
 ./install.sh
+```
+
+### OpenClaw
+
+#### 通过 ClawHub 安装（推荐）
+
+```bash
+claw install field-research-plan
+```
+
+#### 手动安装
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/PushMeQ/field-research-planner.git
+
+# 2. 复制 Skill 文件到 OpenClaw 目录
+cp -r field-research-planner/openclaw-skill ~/.claw/skills/field-research-plan
+
+# 3. 配置环境变量
+export AMAP_API_KEY=your_key_here
 ```
 
 ## 使用方法
@@ -158,6 +181,8 @@ field-research-planner/
 ├── .env.example                 # 环境变量模板
 ├── skill/
 │   └── field-research-plan.md   # Claude Code Skill 文件
+├── openclaw-skill/
+│   └── SKILL.md                 # OpenClaw Skill 文件
 ├── backend/                     # 后端代码
 ├── frontend/                    # 前端代码
 └── docs/                        # 详细文档
