@@ -19,7 +19,8 @@ function Sidebar({
   onCreateProject,
   onTabChange,
   onSwitchProject,
-  onShowProjectList
+  onShowProjectList,
+  onSetLoading
 }) {
   const [newPoint, setNewPoint] = useState({ name: '', address: '' })
   const [routeOptions, setRouteOptions] = useState({
@@ -199,7 +200,7 @@ function Sidebar({
     }
 
     setShowImportDialog(false)
-    setLoading(true)
+    if (onSetLoading) onSetLoading(true)
 
     try {
       // 批量调用地理编码 API
@@ -262,7 +263,7 @@ function Sidebar({
       console.error('批量导入错误:', err)
       alert('导入过程中出现错误：' + err.message)
     } finally {
-      setLoading(false)
+      if (onSetLoading) onSetLoading(false)
     }
   }
 

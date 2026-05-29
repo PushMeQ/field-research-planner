@@ -262,6 +262,7 @@ function App() {
         onTabChange={setActiveTab}
         onSwitchProject={handleSwitchProject}
         onShowProjectList={setShowProjectList}
+        onSetLoading={setLoading}
       />
       <div style={{ flex: 1, position: 'relative' }}>
         {activeTab === 'map' && (
