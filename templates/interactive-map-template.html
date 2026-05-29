@@ -1,160 +1,348 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-<title>{{PROJECT_TITLE}} - 交互式路线图</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif; background:#f0f2f5; color:#2c3e50; line-height:1.6; }
-.container { max-width:800px; margin:0 auto; padding:0 0 40px 0; }
-
-.hero { background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%); color:#fff; padding:32px 20px; text-align:center; }
-.hero h1 { font-size:22px; margin-bottom:6px; letter-spacing:2px; }
-.hero .sub { font-size:13px; opacity:0.8; }
-.hero .dates { font-size:14px; margin-top:8px; padding:6px 16px; background:rgba(255,255,255,0.12); border-radius:20px; display:inline-block; }
-
-.section { background:#fff; margin:12px 12px; border-radius:12px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
-.section h3 { font-size:16px; margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid #E74C3C; display:flex; align-items:center; gap:6px; }
-
-.overview-map { width:100%; height:480px; border-radius:8px; overflow:hidden; border:1px solid #e0e0e0; background:#f0f0f0; min-height:480px; }
-
-.day-card { background:#fff; margin:12px 12px; border-radius:12px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-left:4px solid #E74C3C; }
-.day-header { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
-.day-badge { background:#E74C3C; color:#fff; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold; }
-.day-date { font-size:13px; color:#666; }
-.day-drive { font-size:12px; color:#888; background:#f0f0f0; padding:2px 8px; border-radius:8px; }
-.day-count { font-size:12px; font-weight:bold; color:#E74C3C; }
-.day-card h2 { font-size:16px; margin-bottom:8px; }
-.points-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
-.point-tag { background:#fff3cd; color:#856404; padding:3px 10px; border-radius:10px; font-size:11px; border:1px solid #ffc107; }
-.day-map { width:100%; height:300px; border-radius:8px; overflow:hidden; margin-bottom:10px; border:1px solid #e0e0e0; background:#f0f0f0; min-height:300px; }
-.detail-list { font-size:13px; padding-left:20px; margin-bottom:8px; }
-.detail-list li { margin-bottom:3px; }
-.hotel-line { font-size:12px; color:#888; background:#f8f9fa; padding:8px 10px; border-radius:6px; margin-top:6px; }
-
-.footer { text-align:center; padding:24px; font-size:12px; color:#999; }
-.footer p { margin:4px 0; }
-.legend-box { background:white; padding:10px 14px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.12); font-size:11px; line-height:1.8; }
-
-@media (max-width:600px) {
-  .hero h1 { font-size:18px; }
-  .section { margin:8px 8px; padding:12px; }
-  .day-card { margin:8px 8px; padding:12px; }
-  .day-map { height:220px; }
-  .overview-map { height:320px; }
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>甘肃古戏台调查 - 交互式路线图</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; height: 100vh; background: #f5f5f5; }
+        .sidebar { width: 400px; background: white; box-shadow: 2px 0 8px rgba(0,0,0,0.1); overflow-y: auto; z-index: 1000; }
+        .sidebar-header { background: linear-gradient(135deg, #1890ff, #096dd9); color: white; padding: 20px; position: sticky; top: 0; z-index: 10; }
+        .sidebar-header h1 { margin: 0 0 8px; font-size: 18px; }
+        .sidebar-header p { margin: 0; font-size: 12px; opacity: 0.9; }
+        .day-card { border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.2s; }
+        .day-card:hover { background: #f5f5f5; }
+        .day-card.active { background: #e6f7ff; border-left: 4px solid #1890ff; }
+        .day-header { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+        .day-title { font-weight: 600; color: #1890ff; }
+        .day-info { font-size: 12px; color: #666; }
+        .day-points { padding: 0 16px 12px; }
+        .point-item { padding: 8px 12px; background: #fafafa; border-radius: 4px; margin-bottom: 6px; border-left: 3px solid #1890ff; cursor: pointer; transition: all 0.2s; }
+        .point-item:hover { background: #e6f7ff; transform: translateX(4px); }
+        .point-name { font-weight: 500; font-size: 14px; margin-bottom: 4px; }
+        .point-address { font-size: 12px; color: #666; }
+        .point-distance { font-size: 11px; color: #1890ff; margin-top: 4px; padding: 4px 8px; background: #f0f8ff; border-radius: 4px; display: inline-block; }
+        .hotel-info { margin: 8px 16px 12px; padding: 10px; background: #fff7e6; border-radius: 4px; border: 1px solid #ffd591; }
+        .hotel-title { font-weight: 600; font-size: 13px; color: #fa8c16; margin-bottom: 6px; }
+        .hotel-detail { font-size: 12px; color: #666; margin-bottom: 2px; }
+        .map-container { flex: 1; position: relative; }
+        #map { width: 100%; height: 100%; }
+        .controls { position: absolute; top: 16px; right: 16px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-primary { background: #1890ff; color: white; }
+        .btn-primary:hover { background: #40a9ff; }
+        .btn-default { background: white; color: #333; border: 1px solid #d9d9d9; }
+        .btn-default:hover { border-color: #40a9ff; color: #40a9ff; }
+        .legend { position: absolute; bottom: 20px; right: 20px; background: white; padding: 16px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 1000; font-size: 12px; }
+        .legend-title { font-weight: 600; margin-bottom: 10px; font-size: 14px; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 6px; }
+        .legend-color { width: 16px; height: 16px; border-radius: 50%; margin-right: 8px; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .stats-bar { position: absolute; bottom: 20px; left: 20px; background: white; padding: 12px 16px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 1000; font-size: 12px; }
+        .stats-grid { display: flex; gap: 16px; }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 18px; font-weight: bold; color: #1890ff; }
+        .stat-label { color: #666; }
+    </style>
 </head>
 <body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>甘肃古戏台调查</h1>
+            <p>太原出发 · 10天 · 29个点位 · 4人自驾</p>
+            <p>2026年5月30日 - 6月8日</p>
+        </div>
+        <div id="day-list"></div>
+    </div>
 
-<div class="hero">
-  <h1>{{PROJECT_TITLE}}</h1>
-  <div class="sub">{{PROJECT_SUBTITLE}}</div>
-  <div class="dates">{{PROJECT_DATE_RANGE}}</div>
-</div>
+    <div class="map-container">
+        <div id="map"></div>
+        <div class="controls">
+            <button class="btn btn-primary" onclick="showAllPoints()">显示所有点位</button>
+            <button class="btn btn-default" onclick="showRoute()">显示路线</button>
+        </div>
+        <div class="legend">
+            <div class="legend-title">图例</div>
+            <div class="legend-item"><div class="legend-color" style="background: #1890ff;"></div><span>考察点位</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: #52c41a;"></div><span>住宿酒店</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: #ff4d4f;"></div><span>当前选中</span></div>
+        </div>
+        <div class="stats-bar">
+            <div class="stats-grid">
+                <div class="stat-item"><div class="stat-value">29</div><div class="stat-label">点位</div></div>
+                <div class="stat-item"><div class="stat-value">10</div><div class="stat-label">天数</div></div>
+                <div class="stat-item"><div class="stat-value">2,650</div><div class="stat-label">公里</div></div>
+            </div>
+        </div>
+    </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 行程数据（带酒店坐标）
+        const tripData = [
+            { day: 1, title: '太原 → 庆阳', date: '5/30', points: [{ name: '报德寺戏台', address: '庆阳市镇原县上肖乡石崖村', lat: 35.52, lng: 107.35 }], hotel: { name: '全季酒店（庆阳西峰店）', price: '280-350元', address: '西峰区朔州东路7号', phone: '0934-5559666', lat: 35.73, lng: 107.64 }, driveTime: '5-6小时（高铁）', distance: '320公里' },
+            { day: 2, title: '庆阳市内', date: '5/31', points: [{ name: '报德寺戏台', address: '庆阳市镇原县上肖乡石崖村', lat: 35.52, lng: 107.35 }, { name: '清音楼戏台', address: '庆阳市华池县南梁镇荔园堡村', lat: 36.40, lng: 108.34 }, { name: '新堡村戏台', address: '庆阳市华池县悦乐镇新堡村', lat: 36.37, lng: 108.02 }, { name: '店头村戏台', address: '庆阳市宁县良平镇店头村', lat: 35.52, lng: 108.02 }], hotel: { name: '全季酒店（庆阳西峰店）', price: '280-350元', address: '西峰区朔州东路7号', phone: '0934-5559666', lat: 35.73, lng: 107.64 }, driveTime: '4.5小时', distance: '280公里' },
+            { day: 3, title: '庆阳 → 平凉', date: '6/1', points: [{ name: '白家村古戏台', address: '平凉市泾川县泾明乡白家村', lat: 35.33, lng: 107.37 }, { name: '老戏台', address: '平凉市灵台县中台镇康家沟村', lat: 35.07, lng: 107.62 }, { name: '打虎村戏台', address: '平凉市崆峒区白水镇打虎村', lat: 35.55, lng: 106.68 }, { name: '红军楼', address: '平凉市静宁县石铺镇继红村', lat: 35.52, lng: 105.73 }], hotel: { name: '全季酒店（平凉崆峒山店）', price: '280-350元', address: '崆峒区崆峒大道中段', phone: '0933-8886988', lat: 35.54, lng: 106.67 }, driveTime: '5小时', distance: '350公里' },
+            { day: 4, title: '平凉 → 天水', date: '6/2', points: [{ name: '龙头寺戏台', address: '天水市秦州区太京镇龙头村', lat: 34.58, lng: 105.72 }, { name: '五阳观戏台', address: '天水市麦积区伯阳镇石门村', lat: 34.52, lng: 106.08 }, { name: '龙王庙', address: '天水市秦安县千户乡胡家渠', lat: 34.86, lng: 105.67 }, { name: '金山寺戏台', address: '天水市甘谷县牛蹄湾金山寺', lat: 34.74, lng: 105.34 }], hotel: { name: '全季酒店（天水中心广场店）', price: '280-350元', address: '秦州区南郭路87号', phone: '0938-6866669', lat: 34.58, lng: 105.72 }, driveTime: '4小时', distance: '280公里' },
+            { day: 5, title: '天水 → 陇南', date: '6/3', points: [{ name: '西南川口戏楼', address: '定西市通渭县陇山乡川口村', lat: 35.21, lng: 105.25 }, { name: '牛坡村古戏台', address: '定西市通渭县鸡川镇牛坡村', lat: 35.21, lng: 105.25 }, { name: '麻池大爷庙戏楼', address: '陇南市武都区汉王镇麻池村', lat: 33.38, lng: 104.92 }, { name: '文昌宫戏楼', address: '陇南市文县石坊镇东峪口村', lat: 32.94, lng: 104.68 }], hotel: { name: '全季酒店（康县店）', price: '260-320元', address: '康县城关镇', phone: '0939-8886688', lat: 33.33, lng: 105.61 }, driveTime: '4.5小时', distance: '320公里' },
+            { day: 6, title: '陇南 → 甘南', date: '6/4', points: [{ name: '单幢式戏楼', address: '陇南市康县王坝镇鸡山坝村', lat: 33.33, lng: 105.61 }, { name: '大桥关村戏台', address: '甘南临潭县石门乡大桥关村', lat: 34.69, lng: 103.55 }, { name: '城隍庙戏台', address: '甘南临潭县新城镇新城北街', lat: 34.69, lng: 103.36 }], hotel: { name: '全季酒店（临潭店）', price: '260-320元', address: '临潭县城关镇', phone: '0941-8886688', lat: 34.69, lng: 103.36 }, driveTime: '4小时', distance: '280公里' },
+            { day: 7, title: '甘南 → 兰州', date: '6/5', points: [{ name: '红城山陕会馆', address: '兰州市永登县红城镇宁朔村', lat: 36.57, lng: 103.38 }], hotel: { name: '全季酒店（兰州西站店）', price: '280-350元', address: '七里河区西津西路87号', phone: '0931-6863888', lat: 36.07, lng: 103.75 }, driveTime: '3小时', distance: '200公里' },
+            { day: 8, title: '兰州 → 白银 → 武威', date: '6/6', points: [{ name: '陇西川古乐楼', address: '白银市会宁县杨集乡陇西川', lat: 35.69, lng: 105.05 }, { name: '平堡灯山楼', address: '白银市靖远县平堡镇平堡村', lat: 36.56, lng: 104.38 }, { name: '平堡戏台', address: '白银市靖远县平堡镇平堡村', lat: 36.56, lng: 104.38 }], hotel: { name: '全季酒店（武威万达广场店）', price: '260-320元', address: '凉州区祁连大道', phone: '0935-2229988', lat: 37.93, lng: 102.64 }, driveTime: '4小时', distance: '300公里' },
+            { day: 9, title: '武威 → 张掖', date: '6/7', points: [{ name: '陈春村戏楼', address: '武威市凉州区洪祥镇陈春村五组', lat: 37.93, lng: 102.64 }, { name: '上花园村戏楼', address: '张掖市民乐县南古镇杨坊乡', lat: 38.43, lng: 100.82 }], hotel: { name: '全季酒店（张掖西站店）', price: '280-350元', address: '甘州区西大街', phone: '0936-8855666', lat: 38.93, lng: 100.43 }, driveTime: '3.5小时', distance: '250公里' },
+            { day: 10, title: '张掖 → 太原', date: '6/8', points: [], hotel: null, driveTime: '5-6小时（高铁+飞机）', distance: '返程' }
+        ];
 
-<script>
-// 初始化每日地图
-function initDayMap(mapId, markers, route) {
-    var container = document.getElementById(mapId);
-    if (!container) return;
-    container.style.width = '100%';
-    container.style.height = '300px';
-    var m = L.map(mapId, {scrollWheelZoom: false, attributionControl: false, zoomControl: true});
-    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
-        subdomains: '1234', maxZoom: 18
-    }).addTo(m);
-    var allCoords = [];
-    if (route && route.length >= 2) {
-        L.polyline(route, {color: '#E74C3C', weight: 3.5, opacity: 0.75}).addTo(m);
-        allCoords = route.slice();
-    }
-    markers.forEach(function(mk) {
-        var latlng = [mk.lat, mk.lng];
-        allCoords.push(latlng);
-        var color, letter, size;
-        if (mk.type === 'survey') { color = '#E74C3C'; letter = '●'; size = 20; }
-        else if (mk.type === 'hotel') { color = '#1a1a2e'; letter = '◆'; size = 24; }
-        else if (mk.type === 'start') { color = '#27ae60'; letter = '▶'; size = 20; }
-        else { color = '#888'; letter = '●'; size = 16; }
-        var icon = L.divIcon({
-            html: '<div style="background:'+color+';color:#fff;width:'+size+'px;height:'+size+'px;border-radius:50%;text-align:center;line-height:'+size+'px;font-size:11px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);">'+letter+'</div>',
-            iconSize: [size, size], iconAnchor: [size/2, size/2]
-        });
-        L.marker(latlng, {icon: icon}).bindPopup('<b>'+mk.label+'</b>').addTo(m);
-    });
-    if (allCoords.length > 0) { m.fitBounds(allCoords, {padding: [30, 30]}); }
-    setTimeout(function() { m.invalidateSize(); }, 500);
-    setTimeout(function() { m.invalidateSize(); if (allCoords.length > 0) { m.fitBounds(allCoords, {padding: [30, 30]}); } }, 1500);
-}
-
-// 初始化全程路线总览地图
-function initOverviewMap(data, hotelCoords) {
-    var container = document.getElementById('overview-map');
-    if (container) { container.style.width = '100%'; container.style.height = '480px'; }
-    var m = L.map('overview-map', {scrollWheelZoom: false, attributionControl: false, zoomControl: true});
-    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
-        subdomains: '1234', maxZoom: 18
-    }).addTo(m);
-    var colors = ['#E74C3C','#E67E22','#F1C40F','#2ECC71','#3498DB','#9B59B6','#E91E63','#00BCD4','#795548','#FF5722','#607D8B','#3F51B5'];
-    var allBounds = [];
-    data.forEach(function(d, di) {
-        var color = colors[di % colors.length];
-        if (d.route && d.route.length >= 2) {
-            L.polyline(d.route, {color: color, weight: 3, opacity: 0.65}).bindPopup('<b>'+d.title+'</b>').addTo(m);
-            allBounds = allBounds.concat(d.route);
+        // 计算两点之间的距离（公里）
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371
+            const dLat = (lat2 - lat1) * Math.PI / 180
+            const dLng = (lng2 - lng1) * Math.PI / 180
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+            return R * c
         }
-        d.markers.forEach(function(mk) {
-            if (mk.type === 'survey') {
-                var latlng = [mk.lat, mk.lng]; allBounds.push(latlng);
-                var nm = mk.label.match(/#(\d+)/);
-                var ovLetter = nm ? nm[1] : '●';
-                L.marker(latlng, {icon: L.divIcon({
-                    html: '<div style="background:'+color+';color:#fff;width:16px;height:16px;border-radius:50%;text-align:center;line-height:16px;font-size:9px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+ovLetter+'</div>',
-                    iconSize: [16,16], iconAnchor: [8,8]
-                })}).bindPopup('<b>'+mk.label+'</b><br><small>'+d.title+'</small>').addTo(m);
+
+        // 计算行驶时间（小时）
+        function calculateDriveTime(distance) {
+            return distance / 60
+        }
+
+        // 生成侧边栏
+        function generateSidebar() {
+            const sidebar = document.getElementById('day-list')
+            sidebar.innerHTML = ''
+
+            tripData.forEach((day, index) => {
+                const dayCard = document.createElement('div')
+                dayCard.className = 'day-card'
+                dayCard.id = `day-${day.day}`
+                dayCard.onclick = () => selectDay(day.day)
+
+                // 计算点位之间的距离
+                let pointsHtml = day.points.map((point, pIndex) => {
+                    let distanceHtml = ''
+                    if (pIndex < day.points.length - 1) {
+                        const nextPoint = day.points[pIndex + 1]
+                        const distance = calculateDistance(point.lat, point.lng, nextPoint.lat, nextPoint.lng)
+                        const driveTime = calculateDriveTime(distance)
+                        distanceHtml = `<div class="point-distance">↓ ${distance.toFixed(1)} 公里 · ${driveTime.toFixed(1)} 小时</div>`
+                    }
+                    return `
+                        <div class="point-item" onclick="event.stopPropagation(); flyToPoint(${point.lat}, ${point.lng}, '${point.name}')">
+                            <div class="point-name">${pIndex + 1}. ${point.name}</div>
+                            <div class="point-address">${point.address}</div>
+                            ${distanceHtml}
+                        </div>
+                    `
+                }).join('')
+
+                // 计算从酒店到第一个点位的距离
+                let hotelToFirstPointHtml = ''
+                if (index > 0 && day.points.length > 0) {
+                    const prevDay = tripData[index - 1]
+                    if (prevDay.hotel) {
+                        const firstPoint = day.points[0]
+                        const distance = calculateDistance(prevDay.hotel.lat, prevDay.hotel.lng, firstPoint.lat, firstPoint.lng)
+                        const driveTime = calculateDriveTime(distance)
+                        hotelToFirstPointHtml = `
+                            <div style="padding: 8px 16px; background: #fff7e6; border-radius: 4px; margin: 0 16px 8px; border-left: 3px solid #fa8c16;">
+                                <div style="font-size: 12px; color: #fa8c16; font-weight: 500;">从酒店出发</div>
+                                <div style="font-size: 11px; color: #666; margin-top: 2px;">${prevDay.hotel.name.split('（')[0]} → ${firstPoint.name}</div>
+                                <div style="font-size: 11px; color: #1890ff; margin-top: 2px;">↓ ${distance.toFixed(1)} 公里 · ${driveTime.toFixed(1)} 小时</div>
+                            </div>
+                        `
+                    }
+                }
+
+                let hotelHtml = day.hotel ? `
+                    <div class="hotel-info">
+                        <div class="hotel-title">🏨 ${day.hotel.name}</div>
+                        <div class="hotel-detail">价格：${day.hotel.price}</div>
+                        <div class="hotel-detail">地址：${day.hotel.address}</div>
+                        <div class="hotel-detail">电话：${day.hotel.phone}</div>
+                    </div>
+                ` : ''
+
+                dayCard.innerHTML = `
+                    <div class="day-header">
+                        <div>
+                            <div class="day-title">第${day.day}天</div>
+                            <div class="day-info">${day.date} · ${day.driveTime} · ${day.distance}</div>
+                        </div>
+                        <span style="font-size: 12px; color: #1890ff;">${day.points.length}个点位</span>
+                    </div>
+                    <div style="padding: 0 16px 8px; font-size: 14px; color: #333;">${day.title}</div>
+                    ${hotelToFirstPointHtml}
+                    <div class="day-points">${pointsHtml}</div>
+                    ${hotelHtml}
+                `
+
+                sidebar.appendChild(dayCard)
+            })
+        }
+
+        // 初始化地图
+        const map = L.map('map').setView([35.0, 105.0], 5)
+        L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+            subdomains: '1234',
+            maxZoom: 18,
+            attribution: '&copy; 高德地图'
+        }).addTo(map)
+
+        // 存储所有标记
+        let allMarkers = []
+        let selectedDay = null
+
+        // 颜色配置
+        const dayColors = ['#1890ff', '#52c41a', '#fa8c16', '#722ed1', '#13c2c2', '#eb2f96', '#faad14', '#2f54eb', '#a0d911', '#f5222d']
+
+        // 添加标记
+        function addMarkers() {
+            allMarkers.forEach(marker => marker.remove())
+            allMarkers = []
+
+            // 添加点位标记
+            tripData.forEach((day, dayIndex) => {
+                day.points.forEach((point, pointIndex) => {
+                    const marker = L.circleMarker([point.lat, point.lng], {
+                        radius: 10,
+                        fillColor: dayColors[dayIndex % dayColors.length],
+                        color: '#fff',
+                        weight: 3,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(map)
+
+                    marker.bindTooltip(`${day.day}.${pointIndex + 1} ${point.name}`, {
+                        permanent: true,
+                        direction: 'top',
+                        offset: [0, -15]
+                    })
+
+                    marker.bindPopup(`
+                        <div style="min-width: 200px;">
+                            <h3 style="margin: 0 0 8px; color: #1890ff;">${point.name}</h3>
+                            <p style="margin: 0 0 4px; font-size: 12px; color: #666;">${point.address}</p>
+                            <p style="margin: 0; font-size: 12px; color: #999;">第${day.day}天 · 停留1小时</p>
+                        </div>
+                    `)
+
+                    marker.on('click', () => selectDay(day.day))
+                    allMarkers.push(marker)
+                })
+            })
+
+            // 添加酒店标记
+            tripData.forEach((day, dayIndex) => {
+                if (day.hotel) {
+                    const hotelIcon = L.divIcon({
+                        className: 'hotel-icon',
+                        html: `<div style="background: #52c41a; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">🏨 ${day.hotel.name.split('（')[0]}</div>`,
+                        iconSize: [120, 24],
+                        iconAnchor: [60, 12]
+                    })
+
+                    const hotelMarker = L.marker([day.hotel.lat, day.hotel.lng], { icon: hotelIcon }).addTo(map)
+                    hotelMarker.bindPopup(`
+                        <div style="min-width: 200px;">
+                            <h3 style="margin: 0 0 8px; color: #52c41a;">🏨 ${day.hotel.name}</h3>
+                            <p style="margin: 0 0 4px; font-size: 12px;">价格：${day.hotel.price}</p>
+                            <p style="margin: 0 0 4px; font-size: 12px;">地址：${day.hotel.address}</p>
+                            <p style="margin: 0; font-size: 12px;">电话：${day.hotel.phone}</p>
+                        </div>
+                    `)
+                    allMarkers.push(hotelMarker)
+                }
+            })
+
+            // 调整地图视图
+            const allPoints = []
+            tripData.forEach(day => {
+                day.points.forEach(point => allPoints.push([point.lat, point.lng]))
+                if (day.hotel) allPoints.push([day.hotel.lat, day.hotel.lng])
+            })
+            if (allPoints.length > 0) {
+                const bounds = L.latLngBounds(allPoints)
+                map.fitBounds(bounds, { padding: [50, 50] })
             }
-        });
-    });
-    hotelCoords.forEach(function(h) {
-        L.circleMarker([h[0],h[1]], {radius:7, color:'#1a1a2e',fillColor:'#1a1a2e',fillOpacity:0.85,weight:2.5}).bindPopup('<b> '+h[2]+'</b>').addTo(m);
-        allBounds.push([h[0],h[1]]);
-    });
-    if (allBounds.length > 0) { m.fitBounds(allBounds, {padding:[20,20]}); }
-    var legend = L.control({position:'bottomright'});
-    legend.onAdd = function() {
-        var div = L.DomUtil.create('div','legend-box');
-        div.innerHTML = '<b>图例</b><br><span style="color:#E74C3C;">●</span> 调查点<br><span style="color:#1a1a2e;">◆</span> 住宿酒店';
-        return div;
-    };
-    legend.addTo(m);
-    setTimeout(function() { m.invalidateSize(); }, 500);
-    setTimeout(function() { m.invalidateSize(); if (allBounds.length > 0) { m.fitBounds(allBounds, {padding:[20,20]}); } }, 1500);
-}
-</script>
+        }
 
-<!-- 全程路线总览 -->
-<div class="section">
-  <h3>全程路线总览</h3>
-  <div class="overview-map" id="overview-map"></div>
-  <p style="font-size:11px;color:#999;margin-top:8px;">红色标记=调查点 · 黑色标记=住宿酒店</p>
-</div>
+        // 选择某一天
+        function selectDay(dayNumber) {
+            selectedDay = dayNumber
+            document.querySelectorAll('.day-card').forEach(card => card.classList.remove('active'))
+            document.getElementById(`day-${dayNumber}`).classList.add('active')
 
-<!-- 逐日详细行程 -->
-<div class="section" style="background:#f8f9fa;">
-  <h3>逐日详细行程</h3>
-</div>
+            const day = tripData[dayNumber - 1]
+            if (day.points.length > 0) {
+                const bounds = L.latLngBounds(day.points.map(p => [p.lat, p.lng]))
+                map.fitBounds(bounds, { padding: [50, 50] })
+            }
+        }
 
-{{DAILY_CARDS}}
+        // 飞行到指定点位
+        function flyToPoint(lat, lng, name) {
+            const currentZoom = map.getZoom()
+            map.flyTo([lat, lng], Math.max(currentZoom, 12), { duration: 1.5, easeLinearity: 0.25 })
+            allMarkers.forEach(marker => {
+                const markerLatLng = marker.getLatLng()
+                if (Math.abs(markerLatLng.lat - lat) < 0.001 && Math.abs(markerLatLng.lng - lng) < 0.001) {
+                    marker.openPopup()
+                }
+            })
+        }
 
-<div class="footer">
-  <p>生成时间：{{GENERATED_AT}}</p>
-  <p>田野调查行程规划 - 由 Claude Code 生成</p>
-</div>
+        // 显示所有点位
+        function showAllPoints() {
+            const allPoints = []
+            tripData.forEach(day => {
+                day.points.forEach(point => allPoints.push([point.lat, point.lng]))
+                if (day.hotel) allPoints.push([day.hotel.lat, day.hotel.lng])
+            })
+            if (allPoints.length > 0) {
+                const bounds = L.latLngBounds(allPoints)
+                map.fitBounds(bounds, { padding: [50, 50] })
+            }
+        }
 
+        // 显示路线（包括天与天之间的连接）
+        function showRoute() {
+            // 绘制每天的路线
+            tripData.forEach((day, dayIndex) => {
+                if (day.points.length >= 2) {
+                    const dayPoints = day.points.map(p => [p.lat, p.lng])
+                    L.polyline(dayPoints, {
+                        color: dayColors[dayIndex % dayColors.length],
+                        weight: 4,
+                        opacity: 0.8,
+                        dashArray: '10, 10'
+                    }).addTo(map)
+                }
+            })
+
+            // 绘制天与天之间的连接（酒店到下一天第一个点位）
+            for (let i = 0; i < tripData.length - 1; i++) {
+                const currentDay = tripData[i]
+                const nextDay = tripData[i + 1]
+
+                if (currentDay.hotel && nextDay.points.length > 0) {
+                    const hotelLatLng = [currentDay.hotel.lat, currentDay.hotel.lng]
+                    const firstPointLatLng = [nextDay.points[0].lat, nextDay.points[0].lng]
+
+                    L.polyline([hotelLatLng, firstPointLatLng], {
+                        color: '#999',
+                        weight: 3,
+                        opacity: 0.6,
+                        dashArray: '5, 10'
+                    }).addTo(map)
+                }
+            }
+        }
+
+        // 初始化
+        generateSidebar()
+        addMarkers()
+    </script>
 </body>
 </html>
