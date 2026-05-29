@@ -15,10 +15,13 @@ function MapComponent({ points, route, selectedPoint, onSelectPoint }) {
   const markersRef = useRef([])
   const routeLineRef = useRef(null)
 
+  console.log('MapComponent 渲染，点位数量:', points?.length)
+
   // 初始化地图
   useEffect(() => {
     if (mapInstanceRef.current) return
 
+    console.log('初始化地图...')
     const map = L.map(mapRef.current).setView([35.0, 105.0], 5)
 
     // 添加高德瓦片图层
@@ -29,6 +32,7 @@ function MapComponent({ points, route, selectedPoint, onSelectPoint }) {
     }).addTo(map)
 
     mapInstanceRef.current = map
+    console.log('地图初始化完成')
   }, [])
 
   // 更新点位标记

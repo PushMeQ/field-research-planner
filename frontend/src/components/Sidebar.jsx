@@ -152,6 +152,157 @@ function Sidebar({
     reader.readAsText(file)
   }
 
+  // 导出为网页版 HTML
+  const handleExportHTML = () => {
+    if (!route || !points.length) {
+      alert('请先规划路线')
+      return
+    }
+
+    // 生成 HTML 内容
+    const htmlContent = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>田野调查行程方案</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { background: #1890ff; color: white; padding: 30px; border-radius: 8px 8px 0 0; }
+    .header h1 { margin: 0; font-size: 24px; }
+    .header p { margin: 10px 0 0; opacity: 0.9; }
+    .content { background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .section { margin-bottom: 30px; }
+    .section h2 { color: #1890ff; border-bottom: 2px solid #1890ff; padding-bottom: 10px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
+    .stat-card { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; }
+    .stat-value { font-size: 32px; font-weight: bold; color: #1890ff; }
+    .stat-label { font-size: 14px; color: #666; margin-top: 5px; }
+    .day-plan { background: #fafafa; padding: 20px; border-radius: 8px; margin-bottom: 16px; }
+    .day-title { font-weight: 600; margin-bottom: 12px; color: #333; }
+    .point-item { padding: 8px 0; border-bottom: 1px solid #eee; }
+    .point-item:last-child { border-bottom: none; }
+    .point-name { font-weight: 500; }
+    .point-address { font-size: 12px; color: #666; margin-top: 4px; }
+    .map-container { height: 400px; margin-bottom: 20px; border-radius: 8px; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>田野调查行程方案</h1>
+      <p>生成时间：${new Date().toLocaleString('zh-CN')}</p>
+    </div>
+    <div class="content">
+      <div class="section">
+        <h2>行程统计</h2>
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-value">${points.length}</div>
+            <div class="stat-label">考察点位</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${route.totalDistance.toFixed(1)}</div>
+            <div class="stat-label">总里程（公里）</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${route.totalDays}</div>
+            <div class="stat-label">总天数</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>点位列表</h2>
+        ${points.map((point, index) => `
+          <div class="point-item">
+            <div class="point-name">${index + 1}. ${point.name}</div>
+            <div class="point-address">${point.address}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="section">
+        <h2>每日行程</h2>
+        ${route.dailyPlans.map(day => `
+          <div class="day-plan">
+            <div class="day-title">第 ${day.day} 天 <span style="font-weight: normal; color: #666; font-size: 14px;">${day.totalDistance.toFixed(1)} 公里 · ${day.totalHours.toFixed(1)} 小时</span></div>
+            ${day.points.map((point, pIndex) => `
+              <div class="point-item">
+                <div class="point-name">${pIndex + 1}. ${point.name}</div>
+                <div class="point-address">${point.address}${point.travelTime > 0 ? ` (行驶 ${point.travelTime.toFixed(1)} 小时)` : ''}</div>
+              </div>
+            `).join('')}
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="section">
+        <h2>路线地图</h2>
+        <div id="map" class="map-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const points = ${JSON.stringify(points)};
+    const route = ${JSON.stringify(route)};
+
+    // 初始化地图
+    const map = L.map('map').setView([35.0, 105.0], 5);
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+      subdomains: '1234',
+      maxZoom: 18,
+      attribution: '&copy; 高德地图'
+    }).addTo(map);
+
+    // 添加点位标记
+    points.forEach((point, index) => {
+      if (point.lat && point.lng) {
+        L.marker([point.lat, point.lng]).addTo(map)
+          .bindTooltip(point.name, { permanent: true, direction: 'top' });
+      }
+    });
+
+    // 调整地图视图
+    const validPoints = points.filter(p => p.lat && p.lng);
+    if (validPoints.length > 0) {
+      const bounds = L.latLngBounds(validPoints.map(p => [p.lat, p.lng]));
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  </script>
+</body>
+</html>`
+
+    // 下载文件
+    const blob = new Blob([htmlContent], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '田野调查行程方案.html'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // 移动点位顺序
+  const handleMovePoint = (pointId, direction) => {
+    const currentIndex = points.findIndex(p => p.id === pointId)
+    if (currentIndex === -1) return
+
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    if (newIndex < 0 || newIndex >= points.length) return
+
+    const newPoints = [...points]
+    const temp = newPoints[currentIndex]
+    newPoints[currentIndex] = newPoints[newIndex]
+    newPoints[newIndex] = temp
+
+    onReorderPoints(newPoints)
+  }
+
   // 开始编辑点位
   const handleStartEdit = (point) => {
     setEditingPoint(point.id)
@@ -799,27 +950,53 @@ function Sidebar({
                                 </div>
                               )}
                             </div>
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              <button
-                                className="btn btn-default"
-                                style={{ padding: '2px 8px', fontSize: '12px' }}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleStartEdit(point)
-                                }}
-                              >
-                                编辑
-                              </button>
-                              <button
-                                className="btn btn-default"
-                                style={{ padding: '2px 8px', fontSize: '12px' }}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onDeletePoint(point.id)
-                                }}
-                              >
-                                删除
-                              </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button
+                                  className="btn btn-default"
+                                  style={{ padding: '2px 6px', fontSize: '11px' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleMovePoint(point.id, 'up')
+                                  }}
+                                  disabled={index === 0}
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  className="btn btn-default"
+                                  style={{ padding: '2px 6px', fontSize: '11px' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleMovePoint(point.id, 'down')
+                                  }}
+                                  disabled={index === points.length - 1}
+                                >
+                                  ↓
+                                </button>
+                              </div>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button
+                                  className="btn btn-default"
+                                  style={{ padding: '2px 8px', fontSize: '12px' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleStartEdit(point)
+                                  }}
+                                >
+                                  编辑
+                                </button>
+                                <button
+                                  className="btn btn-default"
+                                  style={{ padding: '2px 8px', fontSize: '12px' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onDeletePoint(point.id)
+                                  }}
+                                >
+                                  删除
+                                </button>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -888,7 +1065,16 @@ function Sidebar({
             {/* 路线结果 */}
             {route && (
               <div className="card">
-                <div className="card-header">规划结果</div>
+                <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>规划结果</span>
+                  <button
+                    className="btn btn-primary"
+                    style={{ padding: '4px 12px', fontSize: '12px' }}
+                    onClick={handleExportHTML}
+                  >
+                    导出网页版
+                  </button>
+                </div>
                 <div className="card-body">
                   <div style={{ marginBottom: '12px' }}>
                     <span className="tag tag-green">总距离：{route.totalDistance.toFixed(1)} 公里</span>

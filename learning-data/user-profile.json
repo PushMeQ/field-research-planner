@@ -1,0 +1,19 @@
+{
+  "createdAt": "2026-05-29T11:07:48.462Z",
+  "updatedAt": "2026-05-29T11:07:48.462Z",
+  "totalProjects": 1,
+  "averageCompletionRate": 0,
+  "preferredSettings": {
+    "pointsPerDay": 0,
+    "hoursPerDay": 0,
+    "stayTime": 0
+  },
+  "habits": [
+    {
+      "date": "2026-05-29T11:07:48.462Z",
+      "pointsPerDay": 0,
+      "hoursPerDay": 0,
+      "completionRate": 0
+    }
+  ]
+}

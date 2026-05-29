@@ -1,0 +1,24 @@
+{
+  "planned": {
+    "totalPoints": 0,
+    "totalDistance": 0,
+    "totalDays": 0
+  },
+  "actual": {
+    "totalPoints": 0,
+    "totalDistance": 0,
+    "totalDays": 0,
+    "totalHours": 0
+  },
+  "diff": {
+    "points": 0,
+    "distance": 0,
+    "days": 0
+  },
+  "completionRate": 0,
+  "averages": {
+    "pointsPerDay": 0,
+    "hoursPerDay": 0,
+    "distancePerDay": 0
+  }
+}

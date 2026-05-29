@@ -1,0 +1,54 @@
+{
+  "projectId": "project-1780052677713-4oom7yu8q",
+  "projectName": "11",
+  "generatedAt": "2026-05-29T11:07:48.461Z",
+  "statistics": {
+    "planned": {
+      "totalPoints": 0,
+      "totalDistance": 0,
+      "totalDays": 0
+    },
+    "actual": {
+      "totalPoints": 0,
+      "totalDistance": 0,
+      "totalDays": 0,
+      "totalHours": 0
+    },
+    "diff": {
+      "points": 0,
+      "distance": 0,
+      "days": 0
+    },
+    "completionRate": 0,
+    "averages": {
+      "pointsPerDay": 0,
+      "hoursPerDay": 0,
+      "distancePerDay": 0
+    }
+  },
+  "userHabits": {
+    "preferredPointsPerDay": 0,
+    "preferredHoursPerDay": 0,
+    "preferredStayTime": 0,
+    "commonNotes": [],
+    "timePatterns": {
+      "averageArrivalTime": "",
+      "averageDepartureTime": "",
+      "preferredStartTime": ""
+    },
+    "routePreferences": {
+      "preferHighways": false,
+      "avoidTolls": false,
+      "preferScenicRoutes": false
+    }
+  },
+  "lessons": [
+    {
+      "type": "improvement",
+      "category": "planning",
+      "lesson": "计划过于激进，需要减少每日点位或增加天数",
+      "evidence": "完成率仅 0.0%"
+    }
+  ],
+  "recommendations": []
+}
