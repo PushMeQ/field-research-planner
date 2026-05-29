@@ -119,13 +119,26 @@
 - 酒店信息（名称、地址、电话）
 
 **模板位置：**
+- 模板文件：`templates/field-research-template.html`
 - 原始模板：`projects/gansu-field-research/甘南田野调查完整方案.html`
-- 新方案模板：`projects/field-research-planner/templates/field-research-template.html`
 
 **使用方法：**
 1. 复制模板文件
 2. 修改其中的内容（点位、行程、酒店等）
 3. 生成新的方案文件
+
+**模板变量：**
+- `{{PROJECT_TITLE}}` - 项目标题
+- `{{PROJECT_SUBTITLE}}` - 项目副标题
+- `{{PROJECT_DATE_RANGE}}` - 日期范围
+- `{{TOTAL_DAYS}}` - 总天数
+- `{{TOTAL_POINTS}}` - 总点位数
+- `{{COVERED_CITIES}}` - 覆盖城市
+- `{{TRANSPORT_MODE}}` - 交通方式
+- `{{PEOPLE_COUNT}}` - 出行人数
+- `{{ACCOMMODATION}}` - 住宿安排
+- `{{DAILY_CARDS}}` - 每日行程卡片
+- `{{GENERATED_AT}}` - 生成时间
 
 #### ⚠️ 重要原则：表格格式
 **在对话框中使用 Markdown 表格格式！**

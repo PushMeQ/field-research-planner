@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>甘肃田野调查 · 完整方案 v4</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif; background:#f0f2f5; color:#2c3e50; line-height:1.6; }
+.container { max-width:800px; margin:0 auto; padding:0 0 40px 0; }
+
+.hero { background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%); color:#fff; padding:32px 20px; text-align:center; }
+.hero h1 { font-size:22px; margin-bottom:6px; letter-spacing:2px; }
+.hero .sub { font-size:13px; opacity:0.8; }
+.hero .dates { font-size:14px; margin-top:8px; padding:6px 16px; background:rgba(255,255,255,0.12); border-radius:20px; display:inline-block; }
+
+.section { background:#fff; margin:12px 12px; border-radius:12px; padding:16px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+.section h3 { font-size:16px; margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid #E74C3C; display:flex; align-items:center; gap:6px; }
+
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { background:#f8f9fa; padding:8px 6px; text-align:left; font-weight:600; border-bottom:2px solid #dee2e6; white-space:nowrap; }
+td { padding:8px 6px; border-bottom:1px solid #eee; vertical-align:top; }
+tr:last-child td { border-bottom:none; }
+.check-cell { text-align:center; font-size:18px; color:#E74C3C; }
+
+.day-card { background:#fff; margin:12px 12px; border-radius:12px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.08); border-left:4px solid #E74C3C; }
+.day-header { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
+.day-badge { background:#E74C3C; color:#fff; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold; }
+.day-date { font-size:13px; color:#666; }
+.day-drive { font-size:12px; color:#888; background:#f0f0f0; padding:2px 8px; border-radius:8px; }
+.day-count { font-size:12px; font-weight:bold; color:#E74C3C; }
+.day-card h2 { font-size:16px; margin-bottom:8px; }
+.points-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.point-tag { background:#fff3cd; color:#856404; padding:3px 10px; border-radius:10px; font-size:11px; border:1px solid #ffc107; }
+.day-map { width:100%; height:300px; border-radius:8px; overflow:hidden; margin-bottom:10px; border:1px solid #e0e0e0; background:#f0f0f0; min-height:300px; }
+.detail-list { font-size:13px; padding-left:20px; margin-bottom:8px; }
+.detail-list li { margin-bottom:3px; }
+.hotel-line { font-size:12px; color:#888; background:#f8f9fa; padding:8px 10px; border-radius:6px; margin-top:6px; }
+.overview-map { width:100%; height:480px; border-radius:8px; overflow:hidden; border:1px solid #e0e0e0; background:#f0f0f0; min-height:480px; }
+
+.rental-card { background:#f0f7ff; border:1px solid #b8daff; border-radius:10px; padding:12px; margin-bottom:8px; }
+.rental-card .id { font-weight:bold; color:#0066cc; font-size:14px; }
+.rental-card p { font-size:12px; margin:4px 0; }
+
+.footer { text-align:center; padding:24px; font-size:12px; color:#999; }
+.footer p { margin:4px 0; }
+.legend-box { background:white; padding:10px 14px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.12); font-size:11px; line-height:1.8; }
+.warn-box { background:#fff3cd; border:1px solid #ffc107; border-radius:8px; padding:10px 14px; font-size:12px; margin:8px 0; }
+
+	.survey-label { display:none !important; }
+	t.survey-tip { display:none !important;  background:rgba(0,0,0,0.84) !important; color:#ffc107 !important; border:1px solid rgba(255,193,7,0.4) !important; border-radius:4px !important; padding:1px 5px !important; font-size:9px !important; font-weight:bold !important; white-space:normal !important; max-width:130px !important; word-break:keep-all !important; line-height:1.25 !important; box-shadow:0 1px 4px rgba(0,0,0,0.3) !important; }
+	.survey-tip::before { display:none !important; }
+	.arr-label { background:transparent !important; border:none !important; box-shadow:none !important; }
+	.arr-label::before { display:none !important; }
+	.s-label,.t-label,.h-label { background:transparent !important; border:none !important; }
+
+@media (max-width:600px) {
+  .hero h1 { font-size:18px; }
+  .section { margin:8px 8px; padding:12px; }
+  .day-card { margin:8px 8px; padding:12px; }
+  .day-map { height:220px; }
+  .overview-map { height:320px; }
+  table { font-size:11px; }
+  th, td { padding:6px 4px; }
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>甘肃田野调查 · 古戏台</h1>
+  <div class="sub">太原出发 · 庆阳落地 · 全程一辆车贯穿全省</div>
+  <div class="dates">2026年5月14日 — 5月26日 · 13天 · 27个点位 · 9个地州市</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+function initDayMap(mapId, markers, route, routeTypes) {
+    var container = document.getElementById(mapId);
+    if (!container) return;
+    container.style.width = '100%';
+    container.style.height = '300px';
+    var m = L.map(mapId, {scrollWheelZoom: false, attributionControl: false, zoomControl: true});
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+        subdomains: '1234', maxZoom: 18
+    }).addTo(m);
+    var allCoords = [];
+    if (route && route.length >= 2) {
+        for (var i = 0; i < route.length - 1; i++) {
+            var segType = (routeTypes && routeTypes[i]) ? routeTypes[i] : 'drive';
+            var segColor = (segType === 'rail') ? '#0066cc' : '#E74C3C';
+            var segDash = (segType === 'rail') ? '8,5' : null;
+            var segWeight = (segType === 'rail') ? 2.5 : 3.5;
+            L.polyline([route[i], route[i+1]], {color: segColor, weight: segWeight, opacity: 0.75, dashArray: segDash}).addTo(m);
+            var mid = [(route[i][0]+route[i+1][0])/2, (route[i][1]+route[i+1][1])/2];
+            var dLat = route[i+1][0] - route[i][0];
+            var dLng = route[i+1][1] - route[i][1];
+            var angle = Math.atan2(dLng, dLat) * 180 / Math.PI - 90;
+            L.marker(mid, {icon: L.divIcon({className:'arr-label',html:'<span style="display:block;color:'+segColor+';font-size:11px;transform:rotate('+angle+'deg);line-height:1;">▶</span>',iconSize:[14,14],iconAnchor:[7,7]}), interactive:false}).addTo(m);
+        }
+        allCoords = route.slice();
+    }
+    markers.forEach(function(mk) {
+        if (mk.type === 'survey') return; // defer survey markers to render on top
+        var latlng = [mk.lat, mk.lng], color, letter;
+        allCoords.push(latlng);
+        if (mk.type === 'transit') { color = '#0066cc'; letter = '🚄'; }
+        else if (mk.type === 'hotel') { color = '#1a1a2e'; letter = '◆'; }
+        else if (mk.type === 'start') { color = '#27ae60'; letter = '▶'; }
+        else { color = '#888'; letter = '●'; }
+        var size = (mk.type === 'transit' || mk.type === 'hotel') ? 24 : 20;
+        var shape = (mk.type === 'hotel') ? 'border-radius:3px;' : 'border-radius:50%;';
+        var fSize = (mk.type === 'transit' || mk.type === 'hotel') ? '11px' : '9px';
+        var icon = L.divIcon({
+            html: '<div style="background:'+color+';color:#fff;width:'+size+'px;height:'+size+'px;'+shape+'text-align:center;line-height:'+size+'px;font-size:'+fSize+';font-weight:bold;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);">'+letter+'</div>',
+            iconSize: [size, size], iconAnchor: [size/2, size/2]
+        });
+        L.marker(latlng, {icon: icon}).bindPopup('<b>'+mk.label+'</b>').addTo(m);
+    });
+    // Second pass: survey markers on top, bigger, with number
+    markers.forEach(function(mk) {
+        if (mk.type !== 'survey') return;
+        var latlng = [mk.lat, mk.lng], color = '#E74C3C', letter;
+        allCoords.push(latlng);
+        var nm = mk.label.match(/#(\d+)/);
+        letter = nm ? nm[1] : '●';
+        var size = 26;
+        var icon = L.divIcon({
+            html: '<div style="background:'+color+';color:#fff;width:'+size+'px;height:'+size+'px;border-radius:50%;text-align:center;line-height:'+size+'px;font-size:12px;font-weight:bold;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);">'+letter+'</div>',
+            iconSize: [size, size], iconAnchor: [size/2, size/2]
+        });
+        L.marker(latlng, {icon: icon}).bindPopup('<b>'+mk.label+'</b>').addTo(m);
+    });
+    if (allCoords.length > 0) { m.fitBounds(allCoords, {padding: [30, 30]}); }
+    setTimeout(function() { m.invalidateSize(); }, 500);
+    setTimeout(function() { m.invalidateSize(); if (allCoords.length > 0) { m.fitBounds(allCoords, {padding: [30, 30]}); } }, 1500);
+}
+
+function initOverviewMap(data, hotelCoords) {
+    var container = document.getElementById('overview-map');
+    if (container) { container.style.width = '100%'; container.style.height = '480px'; }
+    var m = L.map('overview-map', {scrollWheelZoom: false, attributionControl: false, zoomControl: true});
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+        subdomains: '1234', maxZoom: 18
+    }).addTo(m);
+    var colors = ['#E74C3C','#E67E22','#F1C40F','#2ECC71','#3498DB','#9B59B6','#E91E63','#00BCD4','#795548','#FF5722','#607D8B','#3F51B5'];
+    var allBounds = [];
+    data.forEach(function(d, di) {
+        var color = colors[di];
+        if (d.route && d.route.length >= 2) {
+            for (var i = 0; i < d.route.length - 1; i++) {
+                var segType = (d.route_type && d.route_type[i]) ? d.route_type[i] : 'drive';
+                var segColor = (segType === 'rail') ? '#0066cc' : color;
+                var segDash = (segType === 'rail') ? '8,5' : null;
+                var segWeight = (segType === 'rail') ? 2 : 3;
+                L.polyline([d.route[i], d.route[i+1]], {color: segColor, weight: segWeight, opacity: 0.65, dashArray: segDash}).bindPopup('<b>'+d.title+'</b>').addTo(m);
+                // Direction arrow at midpoint
+                var mid = [(d.route[i][0]+d.route[i+1][0])/2, (d.route[i][1]+d.route[i+1][1])/2];
+                var dLat = d.route[i+1][0] - d.route[i][0];
+                var dLng = d.route[i+1][1] - d.route[i][1];
+                var angle = Math.atan2(dLng, dLat) * 180 / Math.PI - 90;
+                L.marker(mid, {icon: L.divIcon({className:'arr-label',html:'<span style="display:block;color:'+segColor+';font-size:10px;transform:rotate('+angle+'deg);line-height:1;opacity:0.7;">▶</span>',iconSize:[12,12],iconAnchor:[6,6]}), interactive:false}).addTo(m);
+            }
+            allBounds = allBounds.concat(d.route);
+        }
+        d.markers.forEach(function(mk) {
+            if (mk.type === 'survey') {
+                var latlng = [mk.lat, mk.lng]; allBounds.push(latlng);
+                var nm = mk.label.match(/#(\d+)/);
+                var ovLetter = nm ? nm[1] : '●';
+                L.marker(latlng, {icon: L.divIcon({
+                    html: '<div style="background:'+color+';color:#fff;width:16px;height:16px;border-radius:50%;text-align:center;line-height:16px;font-size:9px;font-weight:bold;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,0.3);">'+ovLetter+'</div>',
+                    iconSize: [16,16], iconAnchor: [8,8]
+                })}).bindPopup('<b>'+mk.label+'</b><br><small>'+d.title+'</small>').addTo(m);
+            }
+        });
+    });
+    hotelCoords.forEach(function(h) {
+        L.circleMarker([h[0],h[1]], {radius:7, color:'#1a1a2e',fillColor:'#1a1a2e',fillOpacity:0.85,weight:2.5}).bindPopup('<b> '+h[2]+'</b>').addTo(m);
+        allBounds.push([h[0],h[1]]);
+    });
+    var transitNodes = [
+        [37.79,112.61,'太原南站（出发）','#0066cc'],
+        [34.38,108.94,'西安北站（换乘）','#666'],
+        [35.73,107.64,'庆阳站（落地取车）','#27ae60'],
+        [38.93,100.43,'张掖西站（终点还车）','#009688'],
+    ];
+    transitNodes.forEach(function(t) {
+        L.circleMarker([t[0],t[1]], {radius:8, color:t[3],fillColor:t[3],fillOpacity:0.9,weight:2.5}).bindPopup('<b>'+t[2]+'</b>').addTo(m);
+        allBounds.push([t[0],t[1]]);
+    });
+    m.fitBounds([[32.8,100.3],[38.1,112.8]], {padding:[20,20]});
+    var legend = L.control({position:'bottomright'});
+    legend.onAdd = function() {
+        var div = L.DomUtil.create('div','legend-box');
+        div.innerHTML = '<b>图例</b><br><span style="color:#E74C3C;">● ▶</span> 调查点(箭头=方向)<br><span style="color:#0066cc;">━━</span> 高铁<br><span style="color:#E74C3C;">━━</span> 驾车<br>◆ 住宿 · ◎ 换乘站';
+        return div;
+    };
+    legend.addTo(m);
+    setTimeout(function() { m.invalidateSize(); }, 500);
+    setTimeout(function() { m.invalidateSize(); m.fitBounds([[32.8,100.3],[38.1,112.8]], {padding:[20,20]}); }, 1500);
+}
+</script>
+
+<div class="section">
+  <h3>全程路线总览（27点位 · 12天 · 9城市）</h3>
+  <div class="overview-map" id="overview-map"></div>
+  <p style="font-size:11px;color:#999;margin-top:8px;">红线=驾车 · 蓝线=高铁 · ▶=行进方向 · 蓝圈=铁路站 · 黑圈=住宿城市 · 红点=调查点</p>
+</div>
+<script>initOverviewMap([{"title": "太原→(西安北中转)→庆阳→镇原县上肖镇石崖川报德寺戏台", "markers": [{"lat": 37.79, "lng": 112.61, "label": "太原南站 出发", "type": "transit"}, {"lat": 34.38, "lng": 108.94, "label": "西安北站 换乘", "type": "transit"}, {"lat": 35.73, "lng": 107.64, "label": "庆阳站 取车", "type": "start"}, {"lat": 35.52, "lng": 107.35, "label": "#3 庆阳市镇原县上肖镇石崖川报德寺戏台", "type": "survey"}, {"lat": 35.73, "lng": 107.64, "label": "庆阳·全季惠风尚院酒店", "type": "hotel"}], "route": [[37.79, 112.61], [34.38, 108.94], [35.73, 107.64], [35.52, 107.35], [35.73, 107.64]], "route_type": ["rail", "rail", "drive", "drive"]}, {"title": "庆阳市→华池县南梁镇→华池县悦乐镇→宁县良平镇→庆阳市区", "markers": [{"lat": 35.73, "lng": 107.64, "label": "庆阳出发", "type": "start"}, {"lat": 36.40, "lng": 108.34, "label": "#5 庆阳市华池县南梁镇荔园堡村清音楼", "type": "survey"}, {"lat": 36.20, "lng": 107.91, "label": "#21 庆阳市华池县悦乐镇新堡村戏台", "type": "survey"}, {"lat": 35.38, "lng": 108.15, "label": "#4 庆阳市宁县良平镇店头村戏台", "type": "survey"}, {"lat": 35.73, "lng": 107.64, "label": "庆阳·全季惠风尚院酒店", "type": "hotel"}], "route": [[35.73, 107.64], [36.55, 108.32], [36.46, 107.95], [35.38, 108.15], [35.73, 107.64]], "route_type": ["drive", "drive", "drive", "drive"]}, {"title": "庆阳市→平凉市泾川县→灵台县→崆峒区→平凉市区", "markers": [{"lat": 35.73, "lng": 107.64, "label": "庆阳出发", "type": "start"}, {"lat": 35.33, "lng": 107.36, "label": "#29 平凉市泾川县泾明乡白家村古戏台", "type": "survey"}, {"lat": 35.08, "lng": 107.62, "label": "#9 平凉市灵台县中台镇康家沟村老戏台", "type": "survey"}, {"lat": 35.54, "lng": 106.67, "label": "#28 平凉市崆峒区白水镇打虎村戏台", "type": "survey"}, {"lat": 35.54, "lng": 106.67, "label": "平凉·全季崆峒山店", "type": "hotel"}], "route": [[35.73, 107.64], [35.33, 107.36], [35.08, 107.62], [35.54, 106.67]], "route_type": ["drive", "drive", "drive"]}, {"title": "平凉→静宁→会宁陇西川", "markers": [{"lat": 35.54, "lng": 106.67, "label": "平凉出发", "type": "start"}, {"lat": 35.52, "lng": 105.59, "label": "#26 静宁县界石铺镇继红村红军楼戏台", "type": "survey"}, {"lat": 35.56, "lng": 105.37, "label": "#8 白银市会宁县杨崖集镇陇西川村古乐楼+#25 红军演讲台", "type": "survey"}, {"lat": 35.69, "lng": 105.05, "label": "会宁·维也纳酒店", "type": "hotel"}], "route": [[35.54, 106.67], [35.52, 105.59], [35.52, 105.15], [35.69, 105.05]], "route_type": ["drive", "drive", "drive"]}, {"title": "会宁→通渭→秦安→天水", "markers": [{"lat": 35.69, "lng": 105.05, "label": "会宁出发", "type": "start"}, {"lat": 35.2, "lng": 105.55, "label": "#6 定西市通渭县鸡川镇牛坡村古戏台", "type": "survey"}, {"lat": 35.21, "lng": 105.24, "label": "#2 定西市通渭县陇山镇川口村古戏台", "type": "survey"}, {"lat": 34.88, "lng": 105.68, "label": "#27 天水市秦安县千户镇胡家渠龙王庙戏台", "type": "survey"}, {"lat": 34.58, "lng": 105.72, "label": "天水·全季中心广场店", "type": "hotel"}], "route": [[35.69, 105.05], [35.2, 105.55], [35.21, 105.24], [34.88, 105.68], [34.58, 105.72]], "route_type": ["drive", "drive", "drive", "drive"]}, {"title": "天水→甘谷→麦积→秦州·住天水", "markers": [{"lat": 34.58, "lng": 105.72, "label": "天水出发", "type": "start"}, {"lat": 34.82, "lng": 105.44, "label": "#7 天水市甘谷县金山镇牛蹄湾白衣寺戏台", "type": "survey"}, {"lat": 34.52, "lng": 106.08, "label": "#22 天水市麦积区伯阳镇五阳观戏台", "type": "survey"}, {"lat": 34.58, "lng": 105.72, "label": "#23 天水市秦州区天水镇龙头寺戏台", "type": "survey"}, {"lat": 34.58, "lng": 105.72, "label": "天水·全季中心广场店", "type": "hotel"}], "route": [[34.58, 105.72], [34.75, 105.33], [34.52, 106.08], [34.58, 105.72]], "route_type": ["drive", "drive", "drive"]}, {"title": "天水→礼县→康县→武都", "markers": [{"lat": 34.58, "lng": 105.72, "label": "天水出发", "type": "start"}, {"lat": 34.15, "lng": 105.12, "label": "#17 陇南市礼县王坝镇张坝村戏台", "type": "survey"}, {"lat": 33.33, "lng": 105.61, "label": "#12 陇南市康县鸡山坝村单幢式戏楼", "type": "survey"}, {"lat": 33.4, "lng": 104.92, "label": "武都·桔子酒店", "type": "hotel"}], "route": [[34.58, 105.72], [34.15, 105.12], [33.33, 105.61], [33.4, 104.92]], "route_type": ["drive", "drive", "drive"]}, {"title": "武都→文县→武都（往返）", "markers": [{"lat": 33.4, "lng": 104.92, "label": "武都出发", "type": "start"}, {"lat": 32.95, "lng": 104.68, "label": "#11 陇南市文县石坊镇东峪口村文昌宫戏楼", "type": "survey"}, {"lat": 33.37, "lng": 105.01, "label": "#10 陇南市武都区汉王镇麻池村大爷庙戏楼", "type": "survey"}, {"lat": 33.4, "lng": 104.92, "label": "武都·桔子酒店", "type": "hotel"}], "route": [[33.4, 104.92], [32.95, 104.68], [33.37, 105.01], [33.4, 104.92]], "route_type": ["drive", "drive", "drive"]}, {"title": "武都→岷县·过渡休整", "markers": [{"lat": 33.4, "lng": 104.92, "label": "武都出发", "type": "start"}, {"lat": 34.43, "lng": 104.04, "label": "岷县入住·过渡休整", "type": "hotel"}], "route": [[33.4, 104.92], [34.43, 104.04]], "route_type": ["drive"]}, {"title": "岷县→临潭→合作→临夏→兰州", "markers": [{"lat": 34.43, "lng": 104.04, "label": "岷县出发", "type": "start"}, {"lat": 34.69, "lng": 103.55, "label": "#15 甘南州临潭县新城镇城隍庙戏台（苏维埃旧址）", "type": "survey"}, {"lat": 34.73, "lng": 103.70, "label": "#14 甘南州临潭县石门乡大桥关村老戏台", "type": "survey"}, {"lat": 36.07, "lng": 103.75, "label": "兰州·全季西站中天健广场店", "type": "hotel"}], "route": [[34.43, 104.04], [34.69, 103.55], [34.73, 103.70], [34.97, 102.91], [35.6, 103.21], [36.07, 103.75]], "route_type": ["drive", "drive", "drive", "drive", "drive"]}, {"title": "兰州→永登→白银平堡→武威", "markers": [{"lat": 36.07, "lng": 103.75, "label": "兰州出发", "type": "start"}, {"lat": 36.57, "lng": 103.38, "label": "#1 兰州市永登县红城镇宁朔村红城山陕会馆", "type": "survey"}, {"lat": 36.42, "lng": 104.40, "label": "#16 白银市靖远县平堡镇灯山楼+#24 平堡村古戏台", "type": "survey"}, {"lat": 37.93, "lng": 102.64, "label": "武威·全季万达广场店", "type": "hotel"}], "route": [[36.07, 103.75], [36.57, 103.38], [36.42, 104.40], [37.93, 102.64]], "route_type": ["drive", "drive", "drive"]}, {"title": "武威→洪祥→张掖上花园·考察结束", "markers": [{"lat": 37.93, "lng": 102.64, "label": "武威出发", "type": "start"}, {"lat": 38.02, "lng": 102.55, "label": "#19 武威市凉州区洪祥镇陈春村戏台", "type": "survey"}, {"lat": 38.5, "lng": 100.52, "label": "#18 张掖市民乐县南古镇上花园村戏台 🏁全部完毕", "type": "survey"}], "route": [[37.93, 102.64], [38.02, 102.55], [38.5, 100.52]], "route_type": ["drive", "drive"]}], [[35.73, 107.64, "庆阳"], [35.54, 106.67, "平凉"], [35.69, 105.05, "会宁"], [34.58, 105.72, "天水"], [33.4, 104.92, "武都"], [34.43, 104.04, "岷县"], [36.07, 103.75, "兰州"], [37.93, 102.64, "武威"], [38.93, 100.43, "张掖"]]);</script>
+
+<div class="section">
+  <h3>行程概览</h3>
+  <table>
+    <tr><th>总天数</th><td>13天（5/14-5/26）</td><th>调查点</th><td>27个</td></tr>
+    <tr><th>覆盖城市</th><td colspan="3">庆阳、平凉、天水、陇南、甘南、兰州、白银、武威、张掖（9个地州市）</td></tr>
+    <tr><th>租车方案</th><td colspan="3">神州租车 · <b>全程一辆车不中断</b> · 全国免异地还车费<br>庆阳站取车（送车上门）→ 张掖西站还车（☎ 0936-8888450）· 13天贯穿全省</td></tr>
+    <tr><th>高铁段</th><td>仅2段（头尾）</td><th>最长驾驶</th><td>D10 岷县→临潭→合作→临夏→兰州 约7h</td></tr>
+    <tr><th>住宿</th><td colspan="3">全季为主（8晚）+ 桔子（2晚）+ 维也纳（1晚）+ 本地宾馆（1晚·岷县）</td></tr>
+  </table>
+  <div class="warn-box">⚠️ <b>已验证关键事项：</b>① D1907不到庆阳，太原南须在西安北换乘 ② 岷县无一嗨/神州网点，因此改为全程一辆车从庆阳直开张掖 ③ 白银南→武威高铁取消，直接驾车 ④ 张掖西→太原南须在兰州西换乘</div>
+</div>
+
+<div class="section">
+  <h3>去程：太原南 → 西安北 → 庆阳（5月14日）</h3>
+  <table>
+    <tr><th>段</th><th>路线</th><th>线路</th><th>耗时</th></tr>
+    <tr><td>1</td><td>太原南 → 西安北</td><td>大西高铁</td><td>~3h（D2821等）</td></tr>
+    <tr><td colspan="4">西安北站内换乘（预留30-40min）</td></tr>
+    <tr><td>2</td><td>西安北 → 庆阳站</td><td>银西高铁</td><td>~1h15m（G3171等）</td></tr>
+  </table>
+  <p style="font-size:12px;color:#666;margin-top:8px;">⚠️ 太原南→庆阳无直达车，全程约5h。太原南14:40出发，庆阳19:39到达。神州租车送车上门到庆阳站。</p>
+</div>
+
+<div class="section">
+  <h3>回程：张掖西 → 兰州西 → 太原南（5月26日）</h3>
+  <table>
+    <tr><th>段</th><th>路线</th><th>线路</th><th>耗时</th></tr>
+    <tr><td>1</td><td>张掖西 → 兰州西</td><td>兰新高铁</td><td>~3h（D2756等）</td></tr>
+    <tr><td colspan="4">兰州西站内换乘（预留40min）</td></tr>
+    <tr><td>2</td><td>兰州西 → 太原南</td><td>宝兰+大西高铁</td><td>~7h（D2568等）</td></tr>
+  </table>
+  <p style="font-size:12px;color:#666;margin-top:8px;">⚠️ 张掖西→太原南无直达车，全程约11h。张掖西10:08出发，太原南21:02到达。D12下午在张掖西站一嗨还车。</p>
+</div>
+
+
+<div class="section">
+  <h3>返程推荐：方案B — 高铁+飞机（5月25-26日）</h3>
+  <div class="warn-box">🏆 <b>推荐方案：</b>D12傍晚高铁到兰州 + D13下午航班飞太原。比纯高铁快近6小时，费用还便宜¥200+。</div>
+  <table>
+    <tr><th style="width:18%;">时间</th><th>事项</th><th>备注</th></tr>
+    <tr><td colspan="3"><b>D12（5/25 周日）— 调查最后一天</b></td></tr>
+    <tr><td>14:30</td><td>#18 上花园村调查结束（正常节奏）</td><td>不催不赶</td></tr>
+    <tr><td>15:10</td><td>到达张掖西站</td><td>驾车40min</td></tr>
+    <tr><td>15:10-15:40</td><td>神州租车还车（从容办理）</td><td>站内还车</td></tr>
+    <tr><td>15:40-17:34</td><td>候车 · 1h19min缓冲</td><td>充裕</td></tr>
+    <tr><td>17:44-20:47</td><td>🚄 D576 张掖西→兰州西（3h03m，¥149.5）</td><td>高铁上晚餐</td></tr>
+    <tr><td>20:50</td><td>🏨 入住全季兰州西站中天健广场店</td><td>☎ 0931-6863888</td></tr>
+    <tr><td colspan="3"><b>D13（5/26 周一）— 返程日</b></td></tr>
+    <tr><td>08:30</td><td>自然醒、早餐、退房</td><td>不赶早</td></tr>
+    <tr><td>09:45-10:27</td><td>🚄 C8603 兰州西→中川机场（42min，¥9-30）</td><td>城际铁路</td></tr>
+    <tr><td>10:30-12:30</td><td>值机、安检、机场午餐</td><td>2h充裕</td></tr>
+    <tr><td>13:30-15:00</td><td>✈️ FU6740 兰州→太原武宿（1h30m）</td><td>福州航空</td></tr>
+    <tr><td>15:00</td><td>🛬 太原武宿机场落地</td><td>比纯高铁早5h48m到家</td></tr>
+  </table>
+  <p style="font-size:12px;color:#666;margin-top:8px;"><b>备选：纯高铁方案C</b>（D12住张掖+D13高铁10h40m，20:48到太原）· D576赶不上还有D2750(18:49)/D2760(19:54)兜底。出行前请以12306实时查询为准。</p>
+</div>
+
+<div class="section">
+  <h3>租车方案（神州租车 · 庆阳站取车 · 张掖西站还车）</h3>
+  <div class="rental-card">
+    <span class="id">全程一辆车 · 13天 · 庆阳→张掖贯穿全省</span>
+    <p>取车：<b>庆阳站</b>（神州租车庆阳站店，提前在App预约取车）</p>
+    <p>还车：<b>张掖西站</b>（神州租车张掖西站店，站内还车）</p>
+    <p>庆阳→平凉→天水→陇南→甘南→兰州→白银→武威→张掖 | 全程不换车</p>
+  </div>
+  <div class="warn-box">⚠️ <b>为什么只有一段？</b>验证发现岷县无神州等连锁租车网点，不能在岷县还车。最近的神州在定西（~130km外）。改为全程一辆车从庆阳开到张掖，彻底避开所有无网点地区。神州全国免异地还车费。</div>
+</div>
+
+<div class="section">
+  <h3>住宿安排（华住会优先 · 全季为主）</h3>
+  <table>
+    <tr><th>晚次</th><th>日期</th><th>城市</th><th>酒店</th><th>品牌</th><th>地址</th><th>电话</th></tr>
+    <tr><td>D1</td><td>5/14</td><td>庆阳</td><td>全季庆阳惠风尚院酒店</td><td>全季 ☆</td><td>西峰区朔州东路7号</td><td>0934-5559666</td></tr>
+<tr><td>D2</td><td>5/15</td><td>庆阳</td><td>全季庆阳惠风尚院酒店</td><td>全季 ☆</td><td>西峰区朔州东路7号</td><td>0934-5559666</td></tr>
+<tr><td>D3</td><td>5/16</td><td>平凉</td><td>全季酒店(平凉崆峒山店)</td><td>全季 ☆</td><td>崆峒区崆峒大道中段</td><td>0933-8886988</td></tr>
+<tr><td>D4</td><td>5/17</td><td>会宁</td><td>维也纳酒店(会宁店)</td><td>维也纳 ⚠️</td><td>会宁县会师镇</td><td>0943-5916666</td></tr>
+<tr><td>D5</td><td>5/18</td><td>天水</td><td>全季酒店(天水中心广场店)</td><td>全季 ☆</td><td>秦州区南郭路87号</td><td>0938-6866669</td></tr>
+<tr><td>D6</td><td>5/19</td><td>天水</td><td>全季酒店(天水中心广场店)</td><td>全季 ☆</td><td>秦州区南郭路87号</td><td>0938-6866669</td></tr>
+<tr><td>D7</td><td>5/20</td><td>武都</td><td>桔子酒店(武都店)</td><td>桔子 ☆</td><td>武都区长江大道</td><td>0939-8222666</td></tr>
+<tr><td>D8</td><td>5/21</td><td>武都</td><td>桔子酒店(武都店)</td><td>桔子 ☆</td><td>武都区长江大道</td><td>0939-8222666</td></tr>
+<tr><td>D9</td><td>5/22</td><td>岷县</td><td>岷县（过渡休整·县城宾馆）</td><td>本地 ⚠️</td><td>岷县</td><td>—</td></tr>
+<tr><td>D10</td><td>5/23</td><td>兰州</td><td>全季酒店(兰州西站中天健广场店)</td><td>全季 ☆</td><td>七里河区西津西路87号</td><td>0931-6863888</td></tr>
+<tr><td>D11</td><td>5/24</td><td>武威</td><td>全季酒店(武威万达广场店)</td><td>全季 ☆</td><td>凉州区祁连大道</td><td>0935-2229988</td></tr>
+<tr><td>D12</td><td>5/25</td><td>张掖</td><td>全季酒店(张掖西站店)</td><td>全季 ☆</td><td>甘州区西大街</td><td>0936-8855666</td></tr>
+<tr><td>D13</td><td>5/26</td><td>返程</td><td>张掖西→兰州西→太原南</td><td>—</td><td>—</td><td>—</td></tr>
+
+  </table>
+</div>
+
+<div class="section">
+  <h3>高铁/动车票清单（仅头尾2段 · 其余全程自驾）</h3>
+  <table>
+    <tr><th>日期</th><th>区间</th><th>用途</th><th>备注</th></tr>
+    <tr><td>5/14</td><td>太原南→西安北→庆阳</td><td>去程（西安北换乘1次）</td><td>D2821→G3171 14:40-19:39 约5h</td></tr>
+<tr><td>5/26</td><td>张掖西→兰州西→太原南</td><td>回程（兰州西换乘1次）</td><td>D2756→D2568 10:08-21:02 约11h</td></tr>
+
+  </table>
+</div>
+
+<div class="section" style="background:#f8f9fa;">
+  <h3>逐日详细行程（12天 · 可双指缩放地图 · 点击标记查看详情）</h3>
+</div>
+
+        <div class="day-card" id="d1">
+            <div class="day-header">
+                <span class="day-badge">Day 1</span>
+                <span class="day-date">5/14 周三</span>
+                <span class="day-drive">高铁5h + 驾车38min</span>
+                <span class="day-count">1点</span>
+            </div>
+            <h2>太原→(西安北中转)→庆阳→镇原县上肖镇石崖川报德寺戏台</h2>
+            <div class="points-row"><span class="point-tag">#3 庆阳市镇原县上肖镇石崖川报德寺戏台</span></div>
+            <div class="day-map" id="map_day1"></div>
+            <ul class="detail-list"><li>🚄 太原南站出发（D2821等，14:40发）→ 西安北站（17:34到）</li><li>西安北站内换乘（34min）→ G3171 → 庆阳站（19:39到）</li><li>总程约5h · 神州租车送车上门到庆阳站</li><li>⚠️ 注意：太原南→庆阳无直达车，必须在西安北换乘一次</li><li>→ 驾车38分钟前往镇原县上肖镇石崖川报德寺戏台</li><li>#3 庆阳市镇原县上肖镇石崖川报德寺戏台</li><li>考察结束后驾车返回庆阳市区休整</li></ul>
+            <div class="hotel-line">全季庆阳惠风尚院酒店 · 西峰区朔州东路7号 ☎ 0934-5559666</div>
+        </div>
+        <script>
+        initDayMap('map_day1', [{"lat": 37.79, "lng": 112.61, "label": "太原南站 出发", "type": "transit"}, {"lat": 34.38, "lng": 108.94, "label": "西安北站 换乘", "type": "transit"}, {"lat": 35.73, "lng": 107.64, "label": "庆阳站 取车", "type": "start"}, {"lat": 35.52, "lng": 107.35, "label": "#3 庆阳市镇原县上肖镇石崖川报德寺戏台", "type": "survey"}, {"lat": 35.73, "lng": 107.64, "label": "庆阳·全季惠风尚院酒店", "type": "hotel"}], [[37.79, 112.61], [34.38, 108.94], [35.73, 107.64], [35.52, 107.35], [35.73, 107.64]], ["rail", "rail", "drive", "drive"]);
+        </script>
+        
+
+        <div class="day-card" id="d2">
+            <div class="day-header">
+                <span class="day-badge">Day 2</span>
+                <span class="day-date">5/15 周四</span>
+                <span class="day-drive">驾车 ~4.5h</span>
+                <span class="day-count">3点</span>
+            </div>
+            <h2>庆阳市→庆阳市华池县南梁镇→悦乐镇→宁县良平镇→庆阳市</h2>
+            <div class="points-row"><span class="point-tag">#5 庆阳市华池县南梁镇荔园堡村清音楼</span><span class="point-tag">#21 庆阳市华池县悦乐镇新堡村戏台</span><span class="point-tag">#4 庆阳市宁县良平镇店头村戏台</span></div>
+            <div class="day-map" id="map_day2"></div>
+            <ul class="detail-list"><li>08:00 庆阳市区出发 → 华池县南梁镇荔园堡村（驾车1h12min）</li><li>#5 庆阳市华池县南梁镇荔园堡村清音楼</li><li>→ 庆阳市华池县悦乐镇新堡村（驾车1h10min），#21 庆阳市华池县悦乐镇新堡村戏台</li><li>中午 华池县境内午餐</li><li>14:00 → 庆阳市宁县良平镇店头村（驾车1.5h），#4 庆阳市宁县良平镇店头村戏台</li><li>→ 驾车返回庆阳市区（约1h），当晚返回庆阳入住</li></ul>
+            <div class="hotel-line">全季庆阳惠风尚院酒店 · 西峰区朔州东路7号 ☎ 0934-5559666</div>
+        </div>
+        <script>
+        initDayMap('map_day2', [{"lat": 35.73, "lng": 107.64, "label": "庆阳出发", "type": "start"}, {"lat": 36.40, "lng": 108.34, "label": "#5 庆阳市华池县南梁镇荔园堡村清音楼", "type": "survey"}, {"lat": 36.20, "lng": 107.91, "label": "#21 庆阳市华池县悦乐镇新堡村戏台", "type": "survey"}, {"lat": 35.38, "lng": 108.15, "label": "#4 庆阳市宁县良平镇店头村戏台", "type": "survey"}, {"lat": 35.73, "lng": 107.64, "label": "庆阳·全季惠风尚院酒店", "type": "hotel"}], [[35.73, 107.64], [36.55, 108.32], [36.46, 107.95], [35.38, 108.15], [35.73, 107.64]], ["drive", "drive", "drive", "drive"]);
+        </script>
+        
+
+        <div class="day-card" id="d3">
+            <div class="day-header">
+                <span class="day-badge">Day 3</span>
+                <span class="day-date">5/16 周五</span>
+                <span class="day-drive">驾车 ~5h</span>
+                <span class="day-count">3点</span>
+            </div>
+            <h2>庆阳市→平凉市泾川县泾明乡→灵台县中台镇→崆峒区白水镇→平凉市</h2>
+            <div class="points-row"><span class="point-tag">#29 平凉市泾川县泾明乡白家村古戏台</span><span class="point-tag">#9 平凉市灵台县中台镇康家沟村老戏台</span><span class="point-tag">#28 平凉市崆峒区白水镇打虎村戏台</span></div>
+            <div class="day-map" id="map_day3"></div>
+            <ul class="detail-list"><li>08:00 庆阳市区出发 → 泾川县白家村（驾车1h20min）</li><li>#29 平凉市泾川县泾明乡白家村古戏台</li><li>→ 平凉市灵台县中台镇康家沟村（驾车50min），#9 平凉市灵台县中台镇康家沟村老戏台</li><li>中午 灵台/泾川境内午餐</li><li>14:00 → 平凉市崆峒区白水镇打虎村（驾车1.5h），#28 平凉市崆峒区白水镇打虎村戏台</li><li>→ 驾车15min返回平凉市区，入住</li></ul>
+            <div class="hotel-line">全季酒店(平凉崆峒山店) · 崆峒区崆峒大道中段 ☎ 0933-8886988</div>
+        </div>
+        <script>
+        initDayMap('map_day3', [{"lat": 35.73, "lng": 107.64, "label": "庆阳出发", "type": "start"}, {"lat": 35.33, "lng": 107.36, "label": "#29 平凉市泾川县泾明乡白家村古戏台", "type": "survey"}, {"lat": 35.08, "lng": 107.62, "label": "#9 平凉市灵台县中台镇康家沟村老戏台", "type": "survey"}, {"lat": 35.54, "lng": 106.67, "label": "#28 平凉市崆峒区白水镇打虎村戏台", "type": "survey"}, {"lat": 35.54, "lng": 106.67, "label": "平凉·全季崆峒山店", "type": "hotel"}], [[35.73, 107.64], [35.33, 107.36], [35.08, 107.62], [35.54, 106.67]], ["drive", "drive", "drive"]);
+        </script>
+        
+
+        <div class="day-card" id="d4">
+            <div class="day-header">
+                <span class="day-badge">Day 4</span>
+                <span class="day-date">5/17 周六</span>
+                <span class="day-drive">驾车 ~4h</span>
+                <span class="day-count">3点</span>
+            </div>
+            <h2>平凉市→静宁县界石铺镇→白银市会宁县杨崖集镇陇西川村</h2>
+            <div class="points-row"><span class="point-tag">#26 平凉市静宁县界石铺镇继红村红军楼</span><span class="point-tag">#8 白银市会宁县杨崖集镇陇西川村古乐楼+#25 红军演讲台</span></div>
+            <div class="day-map" id="map_day4"></div>
+            <ul class="detail-list"><li>08:00 平凉市区出发 → 静宁县界石铺镇继红村（驾车1h20min）</li><li>#26 平凉市静宁县界石铺镇继红村红军楼</li><li>→ 白银市会宁县杨崖集镇陇西川村（驾车1h40min）</li><li>中午 会宁境内午餐休整</li><li>#8 白银市会宁县杨崖集镇陇西川村古乐楼（清光绪年间建筑）+ #25 同村红军演讲台</li><li>→ 驾车40min返回会宁县城，入住</li></ul>
+            <div class="hotel-line">维也纳酒店(会宁店) · 会宁县会师镇 ☎ 0943-5916666</div>
+        </div>
+        <script>
+        initDayMap('map_day4', [{"lat": 35.54, "lng": 106.67, "label": "平凉出发", "type": "start"}, {"lat": 35.52, "lng": 105.59, "label": "#26 静宁县界石铺镇继红村红军楼戏台", "type": "survey"}, {"lat": 35.56, "lng": 105.37, "label": "#8 白银市会宁县杨崖集镇陇西川村古乐楼+#25 红军演讲台", "type": "survey"}, {"lat": 35.69, "lng": 105.05, "label": "会宁·维也纳酒店", "type": "hotel"}], [[35.54, 106.67], [35.52, 105.59], [35.52, 105.15], [35.69, 105.05]], ["drive", "drive", "drive"]);
+        </script>
+        
+
+        <div class="day-card" id="d5">
+            <div class="day-header">
+                <span class="day-badge">Day 5</span>
+                <span class="day-date">5/18 周日</span>
+                <span class="day-drive">驾车 ~4.5h</span>
+                <span class="day-count">3点</span>
+            </div>
+            <h2>白银市会宁县→定西市通渭县→天水市秦安县→天水市</h2>
+            <div class="points-row"><span class="point-tag">#6 定西市通渭县鸡川镇牛坡村古戏台</span><span class="point-tag">#2 定西市通渭县陇山镇川口村古戏台</span><span class="point-tag">#27 天水市秦安县千户镇胡家渠龙王庙戏台</span></div>
+            <div class="day-map" id="map_day5"></div>
+            <ul class="detail-list"><li>08:00 会宁出发 → 定西市通渭县鸡川镇牛坡村（驾车1h）</li><li>#6 定西市通渭县鸡川镇牛坡村古戏台</li><li>→ 定西市通渭县陇山镇川口村（驾车30min），#2 定西市通渭县陇山镇川口村古戏台</li><li>中午 通渭境内午餐</li><li>14:00 → 天水市秦安县千户镇胡家渠（驾车1h20min），#27 天水市秦安县千户镇胡家渠龙王庙戏台</li><li>→ 驾车1.5h前往天水市区，入住</li></ul>
+            <div class="hotel-line">全季酒店(天水中心广场店) · 秦州区南郭路87号 ☎ 0938-6866669</div>
+        </div>
+        <script>
+        initDayMap('map_day5', [{"lat": 35.69, "lng": 105.05, "label": "会宁出发", "type": "start"}, {"lat": 35.2, "lng": 105.55, "label": "#6 定西市通渭县鸡川镇牛坡村古戏台", "type": "survey"}, {"lat": 35.21, "lng": 105.24, "label": "#2 定西市通渭县陇山镇川口村古戏台", "type": "survey"}, {"lat": 34.88, "lng": 105.68, "label": "#27 天水市秦安县千户镇胡家渠龙王庙戏台", "type": "survey"}, {"lat": 34.58, "lng": 105.72, "label": "天水·全季中心广场店", "type": "hotel"}], [[35.69, 105.05], [35.2, 105.55], [35.21, 105.24], [34.88, 105.68], [34.58, 105.72]], ["drive", "drive", "drive", "drive"]);
+        </script>
+        
+
+        <div class="day-card" id="d6">
+            <div class="day-header">
+                <span class="day-badge">Day 6</span>
+                <span class="day-date">5/19 周一</span>
+                <span class="day-drive">驾车 ~3.5h</span>
+                <span class="day-count">3点</span>
+            </div>
+            <h2>天水市→甘谷县金山镇→麦积区伯阳镇→秦州区天水镇·住天水</h2>
+            <div class="points-row"><span class="point-tag">#7 天水市甘谷县金山镇牛蹄湾白衣寺戏台</span><span class="point-tag">#22 天水市麦积区伯阳镇五阳观戏台</span><span class="point-tag">#23 天水市秦州区天水镇龙头寺戏台</span></div>
+            <div class="day-map" id="map_day6"></div>
+            <ul class="detail-list"><li>08:00 天水市区出发，驾车38min → 天水市甘谷县金山镇牛蹄湾（秀金山）</li><li>09:00 #7 天水市甘谷县金山镇牛蹄湾白衣寺戏台</li><li>驾车1h30min → 天水市麦积区伯阳镇石门山五阳观（途中午餐）</li><li>14:00 #22 天水市麦积区伯阳镇石门山五阳观戏台</li><li>驾车1h → 15:30 天水市秦州区天水镇龙头寺，#23 天水市秦州区天水镇龙头寺戏台</li><li>→ 驾车30min返回天水市区，当晚继续住天水</li></ul>
+            <div class="hotel-line">全季酒店(天水中心广场店) · 秦州区南郭路87号 ☎ 0938-6866669</div>
+        </div>
+        <script>
+        initDayMap('map_day6', [{"lat": 34.58, "lng": 105.72, "label": "天水出发", "type": "start"}, {"lat": 34.82, "lng": 105.44, "label": "#7 天水市甘谷县金山镇牛蹄湾白衣寺戏台", "type": "survey"}, {"lat": 34.52, "lng": 106.08, "label": "#22 天水市麦积区伯阳镇五阳观戏台", "type": "survey"}, {"lat": 34.58, "lng": 105.72, "label": "#23 天水市秦州区天水镇龙头寺戏台", "type": "survey"}, {"lat": 34.58, "lng": 105.72, "label": "天水·全季中心广场店", "type": "hotel"}], [[34.58, 105.72], [34.75, 105.33], [34.52, 106.08], [34.58, 105.72]], ["drive", "drive", "drive"]);
+        </script>
+        
+
+        <div class="day-card" id="d7">
+            <div class="day-header">
+                <span class="day-badge">Day 7</span>
+                <span class="day-date">5/20 周二</span>
+                <span class="day-drive">驾车 ~5.5h</span>
+                <span class="day-count">2点</span>
+            </div>
+            <h2>天水市→陇南市礼县王坝镇→康县→武都区</h2>
+            <div class="points-row"><span class="point-tag">#17 陇南市礼县王坝镇张坝村戏台</span><span class="point-tag">#12 陇南市康县鸡山坝村单幢式戏楼</span></div>
+            <div class="day-map" id="map_day7"></div>
+            <ul class="detail-list"><li>08:00 天水出发 → 陇南市礼县王坝镇张坝村（驾车2h）</li><li>#17 陇南市礼县王坝镇张坝村戏台</li><li>→ 陇南市康县鸡山坝村（驾车2h）</li><li>中午 康县境内午餐休整</li><li>14:00 #12 陇南市康县鸡山坝村单幢式戏楼</li><li>→ 驾车1h40min前往武都区，当晚入住武都</li></ul>
+            <div class="hotel-line">桔子酒店(武都店) · 武都区长江大道 ☎ 0939-8222666</div>
+        </div>
+        <script>
+        initDayMap('map_day7', [{"lat": 34.58, "lng": 105.72, "label": "天水出发", "type": "start"}, {"lat": 34.15, "lng": 105.12, "label": "#17 陇南市礼县王坝镇张坝村戏台", "type": "survey"}, {"lat": 33.33, "lng": 105.61, "label": "#12 陇南市康县鸡山坝村单幢式戏楼", "type": "survey"}, {"lat": 33.4, "lng": 104.92, "label": "武都·桔子酒店", "type": "hotel"}], [[34.58, 105.72], [34.15, 105.12], [33.33, 105.61], [33.4, 104.92]], ["drive", "drive", "drive"]);
+        </script>
+        
+
+        <div class="day-card" id="d8">
+            <div class="day-header">
+                <span class="day-badge">Day 8</span>
+                <span class="day-date">5/21 周三</span>
+                <span class="day-drive">驾车 ~4h</span>
+                <span class="day-count">2点</span>
+            </div>
+            <h2>陇南市武都区→文县石坊镇→武都区汉王镇（往返）</h2>
+            <div class="points-row"><span class="point-tag">#11 陇南市文县石坊镇东峪口村文昌宫戏楼</span><span class="point-tag">#10 陇南市武都区汉王镇麻池村大爷庙戏楼</span></div>
+            <div class="day-map" id="map_day8"></div>
+            <ul class="detail-list"><li>08:00 武都出发 → 陇南市文县石坊镇东峪口村（驾车1h40min）</li><li>#11 文县石坊镇东峪口村文昌宫戏楼</li><li>→ 返回武都方向，途经陇南市武都区汉王镇麻池村（驾车1h20min）</li><li>中午 汉王镇或武都午餐</li><li>14:00 #10 陇南市武都区汉王镇麻池村大爷庙戏楼</li><li>→ 驾车20min返回武都区，当日相对轻松</li></ul>
+            <div class="hotel-line">桔子酒店(武都店) · 武都区长江大道 ☎ 0939-8222666</div>
+        </div>
+        <script>
+        initDayMap('map_day8', [{"lat": 33.4, "lng": 104.92, "label": "武都出发", "type": "start"}, {"lat": 32.95, "lng": 104.68, "label": "#11 陇南市文县石坊镇东峪口村文昌宫戏楼", "type": "survey"}, {"lat": 33.37, "lng": 105.01, "label": "#10 陇南市武都区汉王镇麻池村大爷庙戏楼", "type": "survey"}, {"lat": 33.4, "lng": 104.92, "label": "武都·桔子酒店", "type": "hotel"}], [[33.4, 104.92], [32.95, 104.68], [33.37, 105.01], [33.4, 104.92]], ["drive", "drive", "drive"]);
+        </script>
+        
+
+        <div class="day-card" id="d9">
+            <div class="day-header">
+                <span class="day-badge">Day 9</span>
+                <span class="day-date">5/22 周四</span>
+                <span class="day-drive">驾车 ~4h</span>
+                <span class="day-count">0点</span>
+            </div>
+            <h2>武都→岷县·过渡休整</h2>
+            <div class="points-row"><span class="point-tag" style="background:#888;color:#fff;">纯赶路，无调查点</span></div>
+            <div class="day-map" id="map_day9"></div>
+            <ul class="detail-list"><li>上午从武都出发，沿G212北上前往岷县（驾车约4h）</li><li>途经宕昌县，可顺路午餐</li><li>下午抵达岷县，安排住宿、车辆检查、设备充电、资料整理</li><li>⚠️ 岷县无一嗨/神州等连锁租车。我们是全程一辆车不换，不受影响</li><li>本日无调查点位，作为陇南→甘南的过渡日，为D10储备体力</li></ul>
+            <div class="hotel-line">岷县（县城宾馆·过渡休整·无调查点）</div>
+        </div>
+        <script>
+        initDayMap('map_day9', [{"lat": 33.4, "lng": 104.92, "label": "武都出发", "type": "start"}, {"lat": 34.43, "lng": 104.04, "label": "岷县入住·过渡休整", "type": "hotel"}], [[33.4, 104.92], [34.43, 104.04]], ["drive"]);
+        </script>
+        
+
+        <div class="day-card" id="d10">
+            <div class="day-header">
+                <span class="day-badge">Day 10</span>
+                <span class="day-date">5/23 周五</span>
+                <span class="day-drive">驾车 ~7h ⚠️最长驾驶日</span>
+                <span class="day-count">2点</span>
+            </div>
+            <h2>岷县→甘南州临潭县→合作市→临夏市→兰州市</h2>
+            <div class="points-row"><span class="point-tag">#15 甘南州临潭县新城镇城隍庙戏台（苏维埃旧址）</span><span class="point-tag">#14 甘南州临潭县石门乡大桥关村老戏台</span></div>
+            <div class="day-map" id="map_day10"></div>
+            <ul class="detail-list"><li>08:00 岷县出发，驾车2h → 甘南州临潭县新城镇</li><li>10:30 #15 甘南州临潭县新城镇城隍庙戏台（县苏维埃旧址）·拍摄及考察</li><li>驾车30min → 甘南州临潭县石门乡大桥关村</li><li>#14 甘南州临潭县石门乡大桥关村老戏台</li><li>⚠️ 不走回头路！考察完毕直接北上：</li><li>大桥关→合作市（驾车1.5h，午餐休整）</li><li>合作→临夏市（驾车1.5h）</li><li>临夏→兰州市区（驾车1.5h，约19:00-20:00到达）</li><li>✅ 全程同一辆神州车，不在岷县还车（岷县无网点）</li></ul>
+            <div class="hotel-line">全季酒店(兰州西站中天健广场店) · 七里河区西津西路87号 ☎ 0931-6863888</div>
+        </div>
+        <script>
+        initDayMap('map_day10', [{"lat": 34.43, "lng": 104.04, "label": "岷县出发", "type": "start"}, {"lat": 34.69, "lng": 103.55, "label": "#15 甘南州临潭县新城镇城隍庙戏台（苏维埃旧址）", "type": "survey"}, {"lat": 34.73, "lng": 103.70, "label": "#14 甘南州临潭县石门乡大桥关村老戏台", "type": "survey"}, {"lat": 36.07, "lng": 103.75, "label": "兰州·全季西站中天健广场店", "type": "hotel"}], [[34.43, 104.04], [34.69, 103.55], [34.73, 103.70], [34.97, 102.91], [35.6, 103.21], [36.07, 103.75]], ["drive", "drive", "drive", "drive", "drive"]);
+        </script>
+        
+
+        <div class="day-card" id="d11">
+            <div class="day-header">
+                <span class="day-badge">Day 11</span>
+                <span class="day-date">5/24 周六</span>
+                <span class="day-drive">驾车 ~5.5h</span>
+                <span class="day-count">3点</span>
+            </div>
+            <h2>兰州市→永登县红城镇→白银市靖远县平堡镇→武威市</h2>
+            <div class="points-row"><span class="point-tag">#1 兰州市永登县红城镇宁朔村红城山陕会馆</span><span class="point-tag">#16 白银市靖远县平堡镇灯山楼+#24 平堡村古戏台</span></div>
+            <div class="day-map" id="map_day11"></div>
+            <ul class="detail-list"><li>08:00 兰州市区出发，驾车1h → 兰州市永登县红城镇宁朔村</li><li>#1 兰州市永登县红城镇宁朔村红城山陕会馆</li><li>驾车1.5h → 白银市靖远县平堡镇平堡村（黄河岸边）</li><li>#16 白银市靖远县平堡镇灯山楼（省级文保）+ #24 平堡村古戏台（同村，一并考察）</li><li>考察结束后，驾车约3h前往武威（平堡→白银西上G30连霍高速→武威）</li><li>⚠️ 不在白银南站还车坐高铁，直接开车到武威更快</li></ul>
+            <div class="hotel-line">全季酒店(武威万达广场店) · 凉州区祁连大道 ☎ 0935-2229988</div>
+        </div>
+        <script>
+        initDayMap('map_day11', [{"lat": 36.07, "lng": 103.75, "label": "兰州出发", "type": "start"}, {"lat": 36.57, "lng": 103.38, "label": "#1 兰州市永登县红城镇宁朔村红城山陕会馆", "type": "survey"}, {"lat": 36.42, "lng": 104.40, "label": "#16 白银市靖远县平堡镇灯山楼+#24 平堡村古戏台", "type": "survey"}, {"lat": 37.93, "lng": 102.64, "label": "武威·全季万达广场店", "type": "hotel"}], [[36.07, 103.75], [36.57, 103.38], [36.42, 104.40], [37.93, 102.64]], ["drive", "drive", "drive"]);
+        </script>
+        
+
+        <div class="day-card" id="d12">
+            <div class="day-header">
+                <span class="day-badge">Day 12</span>
+                <span class="day-date">5/25 周日</span>
+                <span class="day-drive">驾车 4h</span>
+                <span class="day-count">2点</span>
+            </div>
+            <h2>武威市→凉州区洪祥镇→张掖市民乐县南古镇上花园村·考察结束</h2>
+            <div class="points-row"><span class="point-tag">#19 武威市凉州区洪祥镇陈春村戏台</span><span class="point-tag">#18 张掖市民乐县南古镇上花园村戏台 🏁全部完毕</span></div>
+            <div class="day-map" id="map_day12"></div>
+            <ul class="detail-list"><li>08:00 武威市区出发 → 武威市凉州区洪祥镇陈春村（驾车40min）</li><li>#19 武威市凉州区洪祥镇陈春村戏台</li><li>→ 驾车2h30min前往张掖市民乐县南古镇上花园村</li><li>#18 张掖市民乐县南古镇上花园村戏台</li><li>🏁 全部考察任务结束！</li><li>→ 驾车40min至张掖西站，神州租车还车（☎ 0936-8888450）</li><li>5/26 返程太原：张掖西→兰州西→太原南（D2756→D2568，约11h）</li></ul>
+            <div class="hotel-line">全季酒店(张掖西站店) · 甘州区西大街 ☎ 0936-8855666</div>
+        </div>
+        <script>
+        initDayMap('map_day12', [{"lat": 37.93, "lng": 102.64, "label": "武威出发", "type": "start"}, {"lat": 38.02, "lng": 102.55, "label": "#19 武威市凉州区洪祥镇陈春村戏台", "type": "survey"}, {"lat": 38.5, "lng": 100.52, "label": "#18 张掖市民乐县南古镇上花园村戏台 🏁全部完毕", "type": "survey"}], [[37.93, 102.64], [38.02, 102.55], [38.5, 100.52]], ["drive", "drive"]);
+        </script>
+        
+
+<div class="section">
+  <h3>27个点位勾检表</h3>
+  <table>
+        <tr><th>#</th><th>点位名称</th><th>日期</th><th>星期</th><th></th></tr>
+    <tr><td>1</td><td>#3 庆阳市镇原县上肖镇石崖川报德寺戏台</td><td>Day 1</td><td>5/14 周三</td><td class="check-cell">☐</td></tr>
+    <tr><td>2</td><td>#5 庆阳市华池县南梁镇荔园堡村清音楼</td><td>Day 2</td><td>5/15 周四</td><td class="check-cell">☐</td></tr>
+    <tr><td>3</td><td>#21 庆阳市华池县悦乐镇新堡村戏台</td><td>Day 2</td><td>5/15 周四</td><td class="check-cell">☐</td></tr>
+    <tr><td>4</td><td>#4 庆阳市宁县良平镇店头村戏台</td><td>Day 2</td><td>5/15 周四</td><td class="check-cell">☐</td></tr>
+    <tr><td>5</td><td>#29 平凉市泾川县泾明乡白家村古戏台</td><td>Day 3</td><td>5/16 周五</td><td class="check-cell">☐</td></tr>
+    <tr><td>6</td><td>#9 平凉市灵台县中台镇康家沟村老戏台</td><td>Day 3</td><td>5/16 周五</td><td class="check-cell">☐</td></tr>
+    <tr><td>7</td><td>#28 平凉市崆峒区白水镇打虎村戏台</td><td>Day 3</td><td>5/16 周五</td><td class="check-cell">☐</td></tr>
+    <tr><td>8</td><td>#26 平凉市静宁县界石铺镇继红村红军楼戏台</td><td>Day 4</td><td>5/17 周六</td><td class="check-cell">☐</td></tr>
+    <tr><td>9</td><td>#8 白银市会宁县杨崖集镇陇西川村古乐楼</td><td>Day 4</td><td>5/17 周六</td><td class="check-cell">☐</td></tr>
+    <tr><td>10</td><td>#25 白银市会宁县杨崖集镇陇西川村红军演讲台 ※同村#8</td><td>Day 4</td><td>5/17 周六</td><td class="check-cell">☐</td></tr>
+    <tr><td>11</td><td>#6 定西市通渭县鸡川镇牛坡村古戏台</td><td>Day 5</td><td>5/18 周日</td><td class="check-cell">☐</td></tr>
+    <tr><td>12</td><td>#2 定西市通渭县陇山镇川口村古戏台</td><td>Day 5</td><td>5/18 周日</td><td class="check-cell">☐</td></tr>
+    <tr><td>13</td><td>#27 天水市秦安县千户镇胡家渠龙王庙戏台</td><td>Day 5</td><td>5/18 周日</td><td class="check-cell">☐</td></tr>
+    <tr><td>14</td><td>#7 天水市甘谷县金山镇牛蹄湾白衣寺戏台</td><td>Day 6</td><td>5/19 周一</td><td class="check-cell">☐</td></tr>
+    <tr><td>15</td><td>#22 天水市麦积区伯阳镇五阳观戏台</td><td>Day 6</td><td>5/19 周一</td><td class="check-cell">☐</td></tr>
+    <tr><td>16</td><td>#23 天水市秦州区天水镇龙头寺戏台</td><td>Day 6</td><td>5/19 周一</td><td class="check-cell">☐</td></tr>
+    <tr><td>17</td><td>#17 陇南市礼县王坝镇张坝村戏台</td><td>Day 7</td><td>5/20 周二</td><td class="check-cell">☐</td></tr>
+    <tr><td>18</td><td>#12 陇南市康县鸡山坝村单幢式戏楼</td><td>Day 7</td><td>5/20 周二</td><td class="check-cell">☐</td></tr>
+    <tr><td>19</td><td>#11 陇南市文县石坊镇东峪口村文昌宫戏楼</td><td>Day 8</td><td>5/21 周三</td><td class="check-cell">☐</td></tr>
+    <tr><td>20</td><td>#10 陇南市武都区汉王镇麻池村大爷庙戏楼</td><td>Day 8</td><td>5/21 周三</td><td class="check-cell">☐</td></tr>
+    <tr><td>21</td><td>#15 甘南州临潭县新城镇城隍庙戏台（苏维埃旧址）</td><td>Day 10</td><td>5/23 周五</td><td class="check-cell">☐</td></tr>
+    <tr><td>22</td><td>#14 甘南州临潭县石门乡大桥关村老戏台</td><td>Day 10</td><td>5/23 周五</td><td class="check-cell">☐</td></tr>
+    <tr><td>23</td><td>#1 兰州市永登县红城镇宁朔村红城山陕会馆</td><td>Day 11</td><td>5/24 周六</td><td class="check-cell">☐</td></tr>
+    <tr><td>24</td><td>#16 白银市靖远县平堡镇灯山楼</td><td>Day 11</td><td>5/24 周六</td><td class="check-cell">☐</td></tr>
+    <tr><td>25</td><td>#24 白银市靖远县平堡镇平堡村古戏台 ※同村#16</td><td>Day 11</td><td>5/24 周六</td><td class="check-cell">☐</td></tr>
+    <tr><td>26</td><td>#19 武威市凉州区洪祥镇陈春村戏台</td><td>Day 12</td><td>5/25 周日</td><td class="check-cell">☐</td></tr>
+    <tr><td>27</td><td>#18 张掖市民乐县南古镇上花园村戏台 🏁全部完毕</td><td>Day 12</td><td>5/25 周日</td><td class="check-cell">☐</td></tr>
+
+</table>
+</div>
+
+<div class="footer">
+  <p>甘肃田野调查 · 古戏台专题 · 2026年5月</p>
+  <p>太原 → 庆阳 → 平凉 → 天水 → 陇南 → 甘南 → 兰州 → 武威 → 张掖 → 太原</p>
+</div>
+
+</body>
+</html>
