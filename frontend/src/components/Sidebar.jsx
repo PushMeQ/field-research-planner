@@ -34,6 +34,8 @@ function Sidebar({
   const [importPreview, setImportPreview] = useState([])
   const [importMode, setImportMode] = useState('file') // 'file' or 'text'
   const [importText, setImportText] = useState('')
+  const [editingPoint, setEditingPoint] = useState(null)
+  const [editForm, setEditForm] = useState({ name: '', address: '' })
   const fileInputRef = useRef(null)
 
   const handleAddPoint = () => {
@@ -148,6 +150,71 @@ function Sidebar({
     }
 
     reader.readAsText(file)
+  }
+
+  // 开始编辑点位
+  const handleStartEdit = (point) => {
+    setEditingPoint(point.id)
+    setEditForm({ name: point.name, address: point.address })
+  }
+
+  // 取消编辑
+  const handleCancelEdit = () => {
+    setEditingPoint(null)
+    setEditForm({ name: '', address: '' })
+  }
+
+  // 保存编辑
+  const handleSaveEdit = async (pointId) => {
+    if (!editForm.name.trim() || !editForm.address.trim()) {
+      alert('名称和地址不能为空')
+      return
+    }
+
+    try {
+      if (onSetLoading) onSetLoading(true)
+
+      // 调用地理编码 API 获取新地址的坐标
+      const response = await fetch('/api/geocode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ address: editForm.address })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // 更新点位
+        const updatedPoints = points.map(p => {
+          if (p.id === pointId) {
+            return {
+              ...p,
+              name: editForm.name,
+              address: result.data.address,
+              province: result.data.province,
+              city: result.data.city,
+              district: result.data.district,
+              lat: parseFloat(result.data.location.split(',')[1]),
+              lng: parseFloat(result.data.location.split(',')[0]),
+              level: result.data.level
+            }
+          }
+          return p
+        })
+
+        onReorderPoints(updatedPoints)
+        setEditingPoint(null)
+        setEditForm({ name: '', address: '' })
+      } else {
+        alert('地址解析失败：' + result.error)
+      }
+    } catch (err) {
+      alert('保存失败：' + err.message)
+    } finally {
+      if (onSetLoading) onSetLoading(false)
+    }
   }
 
   // 解析文本内容
@@ -669,27 +736,93 @@ function Sidebar({
                         className={`point-item ${selectedPoint?.id === point.id ? 'active' : ''}`}
                         onClick={() => onSelectPoint(point)}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div>
-                            <div className="point-name">
-                              <span className="tag tag-blue" style={{ marginRight: '8px' }}>
-                                {index + 1}
-                              </span>
-                              {point.name}
+                        {editingPoint === point.id ? (
+                          // 编辑模式
+                          <div style={{ padding: '4px 0' }}>
+                            <div className="form-group" style={{ marginBottom: '8px' }}>
+                              <input
+                                type="text"
+                                className="form-input"
+                                placeholder="点位名称"
+                                value={editForm.name}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                                onClick={(e) => e.stopPropagation()}
+                              />
                             </div>
-                            <div className="point-address">{point.address}</div>
+                            <div className="form-group" style={{ marginBottom: '8px' }}>
+                              <input
+                                type="text"
+                                className="form-input"
+                                placeholder="详细地址"
+                                value={editForm.address}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                className="btn btn-primary"
+                                style={{ padding: '4px 12px', fontSize: '12px', flex: 1 }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleSaveEdit(point.id)
+                                }}
+                              >
+                                保存
+                              </button>
+                              <button
+                                className="btn btn-default"
+                                style={{ padding: '4px 12px', fontSize: '12px', flex: 1 }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCancelEdit()
+                                }}
+                              >
+                                取消
+                              </button>
+                            </div>
                           </div>
-                          <button
-                            className="btn btn-default"
-                            style={{ padding: '2px 8px', fontSize: '12px' }}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onDeletePoint(point.id)
-                            }}
-                          >
-                            删除
-                          </button>
-                        </div>
+                        ) : (
+                          // 显示模式
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                              <div className="point-name">
+                                <span className="tag tag-blue" style={{ marginRight: '8px' }}>
+                                  {index + 1}
+                                </span>
+                                {point.name}
+                              </div>
+                              <div className="point-address">{point.address}</div>
+                              {point.province && point.city && (
+                                <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>
+                                  {point.province} · {point.city} · {point.district}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                className="btn btn-default"
+                                style={{ padding: '2px 8px', fontSize: '12px' }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleStartEdit(point)
+                                }}
+                              >
+                                编辑
+                              </button>
+                              <button
+                                className="btn btn-default"
+                                style={{ padding: '2px 8px', fontSize: '12px' }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onDeletePoint(point.id)
+                                }}
+                              >
+                                删除
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>

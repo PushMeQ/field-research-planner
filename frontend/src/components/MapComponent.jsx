@@ -35,12 +35,20 @@ function MapComponent({ points, route, selectedPoint, onSelectPoint }) {
   useEffect(() => {
     if (!mapInstanceRef.current) return
 
+    console.log('地图组件 - 接收到点位:', points)
+
     // 清除旧标记
     markersRef.current.forEach(marker => marker.remove())
     markersRef.current = []
 
     // 添加新标记
     points.forEach((point, index) => {
+      // 验证坐标
+      if (!point.lat || !point.lng || isNaN(point.lat) || isNaN(point.lng)) {
+        console.warn('跳过无效坐标的点位:', point)
+        return
+      }
+
       const isSelected = selectedPoint?.id === point.id
 
       // 创建自定义图标
@@ -86,8 +94,11 @@ function MapComponent({ points, route, selectedPoint, onSelectPoint }) {
 
     // 如果有点位，调整地图视图
     if (points.length > 0) {
-      const bounds = L.latLngBounds(points.map(p => [p.lat, p.lng]))
-      mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] })
+      const validPoints = points.filter(p => p.lat && p.lng && !isNaN(p.lat) && !isNaN(p.lng))
+      if (validPoints.length > 0) {
+        const bounds = L.latLngBounds(validPoints.map(p => [p.lat, p.lng]))
+        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] })
+      }
     }
   }, [points, selectedPoint, onSelectPoint])
 

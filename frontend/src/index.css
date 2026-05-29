@@ -36,15 +36,14 @@ body {
 
 /* 侧边栏 */
 .sidebar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 350px;
+  width: 380px;
+  min-width: 380px;
   height: 100%;
   background: white;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   overflow-y: auto;
+  border-right: 1px solid #e8e8e8;
 }
 
 .sidebar-header {
