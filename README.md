@@ -76,10 +76,18 @@ chmod +x install-dependencies.sh
 
 ### OpenClaw
 
-#### 通过 ClawHub 安装（推荐）
+#### 一键安装（推荐）
 
+**Mac/Linux：**
 ```bash
-claw install field-research-plan
+curl -fsSL https://raw.githubusercontent.com/PushMeQ/field-research-planner/main/install.sh | bash
+```
+
+**Windows：**
+```powershell
+# 下载并运行安装脚本
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/PushMeQ/field-research-planner/main/install.ps1" -OutFile "install.ps1"
+.\install.ps1
 ```
 
 #### 手动安装
