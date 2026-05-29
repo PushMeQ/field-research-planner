@@ -310,23 +310,22 @@ function Sidebar({
     setDraggedPoint(point)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', point.id)
-    // 添加拖拽时的视觉效果
-    e.target.style.opacity = '0.3'
-    e.target.style.transform = 'scale(0.95)'
+    // 半透明效果
+    setTimeout(() => {
+      e.target.style.opacity = '0.4'
+    }, 0)
   }
 
   // 拖拽经过
   const handleDragOver = (e, point) => {
     e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
     if (draggedPoint && draggedPoint.id !== point.id) {
       setDragOverPoint(point)
     }
   }
 
   // 拖拽离开
-  const handleDragLeave = (e) => {
-    e.preventDefault()
+  const handleDragLeave = () => {
     setDragOverPoint(null)
   }
 
@@ -344,12 +343,11 @@ function Sidebar({
 
     if (draggedIndex === -1 || targetIndex === -1) return
 
-    // 创建新的点位数组
+    // 移动点位到新位置
     const newPoints = [...points]
     const [removed] = newPoints.splice(draggedIndex, 1)
     newPoints.splice(targetIndex, 0, removed)
 
-    // 立即更新点位顺序
     onReorderPoints(newPoints)
     setDraggedPoint(null)
   }
@@ -357,7 +355,6 @@ function Sidebar({
   // 拖拽结束
   const handleDragEnd = (e) => {
     e.target.style.opacity = '1'
-    e.target.style.transform = 'none'
     setDraggedPoint(null)
     setDragOverPoint(null)
   }

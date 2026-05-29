@@ -264,9 +264,9 @@ function App() {
         onShowProjectList={setShowProjectList}
         onSetLoading={setLoading}
       />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {/* 地图始终显示 */}
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div style={{ flex: 1, minHeight: '400px' }}>
           <MapComponent
             points={points}
             route={route}
@@ -281,18 +281,14 @@ function App() {
           )}
         </div>
 
-        {/* 其他内容覆盖在地图上方 - 完全不透明 */}
+        {/* 其他内容在地图下方 */}
         {activeTab !== 'map' && (
           <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'white',
+            height: '50%',
             overflowY: 'auto',
             padding: '20px',
-            zIndex: 1000
+            background: 'white',
+            borderTop: '2px solid #e8e8e8'
           }}>
             {activeTab === 'version' && (
               <VersionManager
