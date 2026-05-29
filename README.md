@@ -15,6 +15,38 @@
 - ✅ **团队协作**：项目数据可导入/导出
 - ✅ **住宿推荐**：实时价格和预订链接
 
+## 依赖 Skill
+
+本 Skill 依赖以下已启用的 skill：
+
+### 核心依赖
+1. **ui-ux-pro-max** - UI/UX 设计规范，确保表格和界面美观
+2. **frontend-design** - 创建高质量前端界面
+3. **design-html** - 生成生产级 HTML/CSS
+4. **make-pdf** - 生成 PDF 文档
+
+### 辅助依赖
+5. **scrape** - 从网页抓取数据（酒店信息、点位信息等）
+6. **browse** - 测试网页和截图
+7. **writing-plans** - 创建实现计划
+8. **skill-creator** - 创建和优化 skill
+
+### 工具依赖
+9. **tools/table_generator.py** - 表格生成器，自动调整列宽
+
+## 功能特点
+
+- ✅ **智能路线规划**：自动优化路线，支持 TSP 算法
+- ✅ **交互式地图**：支持拖拽、缩放、查看详情
+- ✅ **版本管理**：记录每次变更，支持版本回溯
+- ✅ **动态更新**：考察途中实时调整，记录实际行程
+- ✅ **学习进化**：自动学习用户习惯，持续优化建议
+- ✅ **总结汇报**：生成完整的调查报告和统计分析
+- ✅ **离线支持**：缓存数据，无网也能用
+- ✅ **多格式输出**：HTML、PDF、PNG
+- ✅ **团队协作**：项目数据可导入/导出
+- ✅ **住宿推荐**：实时价格和预订链接
+
 ## 快速安装
 
 ### Claude Code
@@ -26,8 +58,8 @@
 git clone https://github.com/PushMeQ/field-research-planner.git
 cd field-research-planner
 
-# 2. 运行安装脚本
-.\install.ps1
+# 2. 运行安装脚本（自动安装依赖 Skill）
+.\install-dependencies.ps1
 ```
 
 #### Mac/Linux
@@ -37,9 +69,9 @@ cd field-research-planner
 git clone https://github.com/PushMeQ/field-research-planner.git
 cd field-research-planner
 
-# 2. 运行安装脚本
-chmod +x install.sh
-./install.sh
+# 2. 运行安装脚本（自动安装依赖 Skill）
+chmod +x install-dependencies.sh
+./install-dependencies.sh
 ```
 
 ### OpenClaw
