@@ -4,6 +4,25 @@
 
 通过对话式交互，帮助用户完成田野调查的完整行程规划，最终生成交互式网页。
 
+## 依赖 Skill
+
+本 Skill 依赖以下已启用的 skill：
+
+### 核心依赖
+1. **ui-ux-pro-max** - UI/UX 设计规范，确保表格和界面美观
+2. **frontend-design** - 创建高质量前端界面
+3. **design-html** - 生成生产级 HTML/CSS
+4. **make-pdf** - 生成 PDF 文档
+
+### 辅助依赖
+5. **scrape** - 从网页抓取数据（酒店信息、点位信息等）
+6. **browse** - 测试网页和截图
+7. **writing-plans** - 创建实现计划
+8. **skill-creator** - 创建和优化 skill
+
+### 工具依赖
+9. **tools/table_generator.py** - 表格生成器，自动调整列宽
+
 ---
 
 ## 完整流程
