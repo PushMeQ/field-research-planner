@@ -338,6 +338,109 @@ function calculateTotalDistance(route, distanceMatrix) {
   return total;
 }
 
+// 批量导入点位（Claude Code 使用）
+app.post('/api/points/batch-import', async (req, res) => {
+  try {
+    const { points } = req.body;
+
+    if (!points || !Array.isArray(points) || points.length === 0) {
+      return res.status(400).json({ error: '点位列表不能为空' });
+    }
+
+    const axios = require('axios');
+    const results = [];
+
+    for (const point of points) {
+      if (!point.address) {
+        results.push({
+          success: false,
+          name: point.name,
+          error: '地址不能为空'
+        });
+        continue;
+      }
+
+      // 检查缓存
+      const cacheKey = `geocode:${point.address}`;
+      const cached = cache.get(cacheKey);
+
+      if (cached) {
+        results.push({
+          success: true,
+          name: point.name,
+          data: cached.data
+        });
+        continue;
+      }
+
+      try {
+        const response = await axios.get(`${AMAP_BASE_URL}/geocode/geo`, {
+          params: {
+            key: AMAP_API_KEY,
+            address: point.address,
+            output: 'JSON'
+          }
+        });
+
+        if (response.data.status === '1' && response.data.geocodes.length > 0) {
+          const geocode = response.data.geocodes[0];
+          const result = {
+            success: true,
+            name: point.name,
+            data: {
+              address: geocode.formatted_address,
+              province: geocode.province,
+              city: geocode.city,
+              district: geocode.district,
+              location: geocode.location,
+              level: geocode.level
+            }
+          };
+
+          // 存入缓存
+          cache.set(cacheKey, result);
+          results.push(result);
+        } else {
+          results.push({
+            success: false,
+            name: point.name,
+            error: '未找到该地址'
+          });
+        }
+      } catch (error) {
+        results.push({
+          success: false,
+          name: point.name,
+          error: '地理编码服务异常'
+        });
+      }
+
+      // 添加延迟，避免触发 API 限制
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // 统计结果
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+
+    return res.json({
+      success: true,
+      data: {
+        total: points.length,
+        success: successCount,
+        fail: failCount,
+        results: results
+      }
+    });
+  } catch (error) {
+    console.error('批量导入点位错误:', error);
+    return res.status(500).json({
+      success: false,
+      error: '批量导入点位服务异常'
+    });
+  }
+});
+
 // 酒店搜索
 app.post('/api/hotel/search', async (req, res) => {
   try {

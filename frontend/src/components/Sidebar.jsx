@@ -27,6 +27,8 @@ function Sidebar({
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [importFile, setImportFile] = useState(null)
   const [importPreview, setImportPreview] = useState([])
+  const [importMode, setImportMode] = useState('file') // 'file' or 'text'
+  const [importText, setImportText] = useState('')
   const fileInputRef = useRef(null)
 
   const handleAddPoint = () => {
@@ -141,6 +143,48 @@ function Sidebar({
     }
 
     reader.readAsText(file)
+  }
+
+  // 解析文本内容
+  const handleTextParse = () => {
+    if (!importText.trim()) {
+      alert('请输入点位信息')
+      return
+    }
+
+    const lines = importText.split('\n').filter(line => line.trim())
+    const points = []
+
+    for (const line of lines) {
+      // 尝试多种分隔符
+      let parts = []
+      if (line.includes('\t')) {
+        parts = line.split('\t')
+      } else if (line.includes(',')) {
+        parts = line.split(',')
+      } else if (line.includes('，')) {
+        parts = line.split('，')
+      } else if (line.includes(' ')) {
+        parts = line.split(/\s+/)
+      } else {
+        // 只有地址，没有名称
+        parts = [line]
+      }
+
+      if (parts.length >= 2) {
+        points.push({
+          name: parts[0].trim(),
+          address: parts[1].trim()
+        })
+      } else if (parts.length === 1 && parts[0].trim()) {
+        points.push({
+          name: `点位 ${points.length + 1}`,
+          address: parts[0].trim()
+        })
+      }
+    }
+
+    setImportPreview(points)
   }
 
   // 执行批量导入
@@ -348,43 +392,99 @@ function Sidebar({
                       setShowImportDialog(false)
                       setImportPreview([])
                       setImportFile(null)
+                      setImportText('')
                     }}
                   >
                     关闭
                   </button>
                 </div>
                 <div className="card-body">
-                  <div style={{ marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '4px', fontSize: '12px' }}>
-                    <p style={{ margin: '0 0 8px', fontWeight: '600' }}>支持的文件格式：</p>
-                    <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                      <li><strong>CSV</strong>：第一行为表头，包含"名称"和"地址"列</li>
-                      <li><strong>TXT</strong>：每行一个点位，名称和地址用制表符或逗号分隔</li>
-                      <li><strong>JSON</strong>：数组格式，每个对象包含 name 和 address 字段</li>
-                    </ul>
+                  {/* 导入模式切换 */}
+                  <div style={{ display: 'flex', marginBottom: '12px', borderBottom: '1px solid #f0f0f0' }}>
+                    <button
+                      className={`btn ${importMode === 'file' ? 'btn-primary' : 'btn-default'}`}
+                      style={{ flex: 1, borderRadius: '4px 4px 0 0' }}
+                      onClick={() => setImportMode('file')}
+                    >
+                      选择文件
+                    </button>
+                    <button
+                      className={`btn ${importMode === 'text' ? 'btn-primary' : 'btn-default'}`}
+                      style={{ flex: 1, borderRadius: '4px 4px 0 0' }}
+                      onClick={() => setImportMode('text')}
+                    >
+                      直接粘贴
+                    </button>
                   </div>
 
-                  <input
-                    type="file"
-                    accept=".csv,.txt,.json,.md"
-                    onChange={handleFileSelect}
-                    style={{ display: 'none' }}
-                    ref={fileInputRef}
-                  />
+                  {/* 文件导入模式 */}
+                  {importMode === 'file' && (
+                    <div>
+                      <div style={{ marginBottom: '12px', padding: '12px', background: '#f5f5f5', borderRadius: '4px', fontSize: '12px' }}>
+                        <p style={{ margin: '0 0 8px', fontWeight: '600' }}>支持的文件格式：</p>
+                        <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                          <li><strong>CSV</strong>：第一行为表头，包含"名称"和"地址"列</li>
+                          <li><strong>TXT</strong>：每行一个点位，名称和地址用制表符或逗号分隔</li>
+                          <li><strong>JSON</strong>：数组格式，每个对象包含 name 和 address 字段</li>
+                        </ul>
+                      </div>
 
-                  <button
-                    className="btn btn-default"
-                    style={{ width: '100%', marginBottom: '12px' }}
-                    onClick={() => fileInputRef.current.click()}
-                  >
-                    选择文件
-                  </button>
+                      <input
+                        type="file"
+                        accept=".csv,.txt,.json,.md"
+                        onChange={handleFileSelect}
+                        style={{ display: 'none' }}
+                        ref={fileInputRef}
+                      />
 
-                  {importFile && (
-                    <div style={{ marginBottom: '12px', fontSize: '12px', color: '#666' }}>
-                      已选择：{importFile.name}
+                      <button
+                        className="btn btn-default"
+                        style={{ width: '100%', marginBottom: '12px' }}
+                        onClick={() => fileInputRef.current.click()}
+                      >
+                        选择文件
+                      </button>
+
+                      {importFile && (
+                        <div style={{ marginBottom: '12px', fontSize: '12px', color: '#666' }}>
+                          已选择：{importFile.name}
+                        </div>
+                      )}
                     </div>
                   )}
 
+                  {/* 文本粘贴模式 */}
+                  {importMode === 'text' && (
+                    <div>
+                      <div style={{ marginBottom: '12px', padding: '12px', background: '#f5f5f5', borderRadius: '4px', fontSize: '12px' }}>
+                        <p style={{ margin: '0 0 8px', fontWeight: '600' }}>粘贴格式说明：</p>
+                        <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                          <li>每行一个点位</li>
+                          <li>名称和地址用<strong>制表符</strong>、<strong>逗号</strong>或<strong>空格</strong>分隔</li>
+                          <li>示例：<code>石崖川报德寺戏台	甘肃省庆阳市镇原县上肖镇石崖川</code></li>
+                        </ul>
+                      </div>
+
+                      <textarea
+                        className="form-input"
+                        rows="6"
+                        placeholder="粘贴点位信息，每行一个：&#10;石崖川报德寺戏台,甘肃省庆阳市镇原县上肖镇石崖川&#10;荔园堡村清音楼,甘肃省庆阳市华池县南梁镇荔园堡村"
+                        value={importText}
+                        onChange={(e) => setImportText(e.target.value)}
+                        style={{ marginBottom: '12px', fontFamily: 'monospace', fontSize: '12px' }}
+                      />
+
+                      <button
+                        className="btn btn-default"
+                        style={{ width: '100%', marginBottom: '12px' }}
+                        onClick={handleTextParse}
+                      >
+                        解析文本
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 预览和导入 */}
                   {importPreview.length > 0 && (
                     <div>
                       <h4 style={{ margin: '0 0 8px', fontSize: '14px' }}>

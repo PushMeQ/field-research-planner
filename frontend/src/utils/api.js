@@ -230,6 +230,17 @@ export const getUserRecommendations = async () => {
   }
 }
 
+// 批量导入点位（Claude Code 使用）
+export const batchImportPoints = async (points) => {
+  try {
+    const response = await api.post('/points/batch-import', { points })
+    return response.data
+  } catch (error) {
+    console.error('批量导入点位失败:', error)
+    throw error
+  }
+}
+
 // ==================== 本地存储操作 ====================
 
 export const getPoints = () => {
