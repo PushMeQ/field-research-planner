@@ -204,6 +204,8 @@ function Sidebar({
     try {
       // 批量调用地理编码 API
       const addresses = importPreview.map(p => p.address)
+      console.log('批量导入 - 请求地址:', addresses)
+
       const response = await fetch('/api/geocode/batch', {
         method: 'POST',
         headers: {
@@ -213,6 +215,7 @@ function Sidebar({
       })
 
       const result = await response.json()
+      console.log('批量导入 - API 返回:', result)
 
       if (result.success) {
         // 将成功的结果转换为点位格式
@@ -234,9 +237,14 @@ function Sidebar({
           }
         }
 
+        console.log('批量导入 - 新点位:', newPoints)
+        console.log('批量导入 - 当前点位:', points)
+
         // 一次性添加所有点位
         if (newPoints.length > 0) {
-          onReorderPoints([...points, ...newPoints])
+          const updatedPoints = [...points, ...newPoints]
+          console.log('批量导入 - 更新后点位:', updatedPoints)
+          onReorderPoints(updatedPoints)
           alert(`成功导入 ${newPoints.length} 个点位`)
         }
 
@@ -251,6 +259,7 @@ function Sidebar({
       setImportFile(null)
       setImportText('')
     } catch (err) {
+      console.error('批量导入错误:', err)
       alert('导入过程中出现错误：' + err.message)
     } finally {
       setLoading(false)
