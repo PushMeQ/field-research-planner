@@ -27,6 +27,53 @@
 
 ## 完整流程
 
+### 第零阶段：环境检查（自动执行）
+
+#### 0.1 检查 API Key 配置
+```
+正在检查环境配置...
+
+检查 AMAP_API_KEY：[已配置/未配置]
+```
+
+**如果未配置：**
+```
+⚠️ 检测到高德地图 API Key 未配置。
+
+为了使用地理编码和路线规划功能，需要配置 API Key。
+
+请按以下步骤配置：
+
+1. 访问 https://lbs.amap.com/
+2. 注册/登录账号
+3. 进入"控制台" → "应用管理" → "我的应用"
+4. 创建新应用，选择"Web 服务"类型
+5. 复制 API Key
+
+配置方式（选择一种）：
+
+方式一：临时配置（仅当前对话有效）
+  export AMAP_API_KEY=your_key_here
+
+方式二：永久配置（推荐，所有对话有效）
+  macOS/Linux:
+    echo 'export AMAP_API_KEY=your_key_here' >> ~/.bashrc
+    source ~/.bashrc
+
+  Windows (PowerShell):
+    [System.Environment]::SetEnvironmentVariable('AMAP_API_KEY', 'your_key_here', 'User')
+    $env:AMAP_API_KEY = 'your_key_here'
+
+请配置完成后告诉我，我再继续。
+```
+
+**如果已配置：**
+```
+✅ 环境配置完成！AMAP_API_KEY 已配置。
+```
+
+---
+
 ### 第一阶段：项目初始化（对话式）
 
 #### 1.1 问候与信息收集

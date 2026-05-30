@@ -47,21 +47,41 @@ Remove-Item -Path $TEMP_DIR -Recurse -Force
 Write-Host "✓ Skill 安装完成！" -ForegroundColor Green
 Write-Host ""
 
-# 配置说明
+# 配置 API Key
 Write-Host "===========================================" -ForegroundColor Cyan
-Write-Host "  配置说明" -ForegroundColor Cyan
+Write-Host "  配置高德地图 API Key" -ForegroundColor Cyan
 Write-Host "===========================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "1. 获取高德地图 API Key："
-Write-Host "   访问 https://lbs.amap.com/"
-Write-Host "   注册账号并创建应用，获取 API Key"
+Write-Host "首次使用需要配置 API Key。"
 Write-Host ""
-Write-Host "2. 配置环境变量："
-Write-Host '   $env:AMAP_API_KEY = "your_api_key_here"'
+Write-Host "获取方式："
+Write-Host "  1. 访问 https://lbs.amap.com/"
+Write-Host "  2. 注册/登录账号"
+Write-Host "  3. 进入控制台 → 应用管理 → 我的应用"
+Write-Host "  4. 创建新应用，选择 Web 服务类型"
+Write-Host "  5. 复制 API Key"
 Write-Host ""
-Write-Host "3. 使用方法："
-Write-Host "   在 Claude Code 中输入 /field-research-plan"
-Write-Host "   或者提到'田野调查'、'行程规划'等关键词"
+
+$API_KEY = Read-Host "请输入你的 API Key（或按 Enter 跳过）"
+
+if ($API_KEY) {
+    # 配置到用户环境变量（永久生效）
+    [System.Environment]::SetEnvironmentVariable('AMAP_API_KEY', $API_KEY, 'User')
+    $env:AMAP_API_KEY = $API_KEY
+    Write-Host "✓ API Key 已配置并生效！" -ForegroundColor Green
+} else {
+    Write-Host "跳过 API Key 配置。" -ForegroundColor Yellow
+    Write-Host "  稍后请手动配置："
+    Write-Host '  $env:AMAP_API_KEY = "your_api_key_here"'
+}
+
+Write-Host ""
+Write-Host "===========================================" -ForegroundColor Cyan
+Write-Host "  使用方法" -ForegroundColor Cyan
+Write-Host "===========================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "在 Claude Code 中输入 /field-research-plan"
+Write-Host "或者提到'田野调查'、'行程规划'等关键词"
 Write-Host ""
 Write-Host "===========================================" -ForegroundColor Cyan
 Write-Host "  安装完成！" -ForegroundColor Cyan

@@ -27,7 +27,12 @@ metadata:
         description: 缓存有效期天数（默认 30）
     emoji: "🗺️"
     homepage: https://github.com/PushMeQ/field-research-planner
+    license: MIT-0
 ---
+
+# 许可证
+
+本 Skill 使用 MIT-0 许可证发布。详见 [MIT-0 License](https://opensource.org/licenses/MIT-0)。
 
 # 田野调查行程规划 Skill
 
@@ -405,15 +410,44 @@ field-research-projects/
 
 ## API Key 配置
 
-首次使用需要配置高德地图 API Key：
+首次使用需要配置高德地图 API Key。
+
+### 获取 API Key
 
 1. 访问 https://lbs.amap.com/
-2. 注册账号并创建应用
-3. 获取 API Key
-4. 设置环境变量：
-   ```bash
-   export AMAP_API_KEY=your_key_here
-   ```
+2. 注册/登录账号
+3. 进入"控制台" → "应用管理" → "我的应用"
+4. 创建新应用，选择"Web 服务"类型
+5. 复制 API Key
+
+### 配置方式（选择一种）
+
+#### 方式一：永久配置（推荐）
+
+**macOS/Linux（Bash）：**
+```bash
+echo 'export AMAP_API_KEY=your_key_here' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**macOS/Linux（Zsh）：**
+```bash
+echo 'export AMAP_API_KEY=your_key_here' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**Windows（PowerShell）：**
+```powershell
+[System.Environment]::SetEnvironmentVariable('AMAP_API_KEY', 'your_key_here', 'User')
+$env:AMAP_API_KEY = 'your_key_here'
+```
+
+#### 方式二：临时配置（仅当前对话有效）
+```bash
+export AMAP_API_KEY=your_key_here
+```
+
+**注意：** 推荐使用永久配置，这样每次开启新对话时都会自动加载 API Key。
 
 ## 离线支持
 
@@ -529,7 +563,9 @@ claw install field-research-plan
 
 ## 许可证
 
-本 Skill 使用 MIT-0 许可证发布。详见 [MIT-0 License](https://opensource.org/licenses/MIT-0)。
+本项目使用 MIT-0 许可证 - 详见 [LICENSE](LICENSE) 文件
+
+发布者接受 MIT-0 许可证条款。
 
 ## 更新日志
 

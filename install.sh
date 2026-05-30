@@ -54,21 +54,58 @@ rm -rf "$TEMP_DIR"
 echo -e "${GREEN}✓ Skill 安装完成！${NC}"
 echo ""
 
-# 配置说明
+# 配置 API Key
 echo "==========================================="
-echo "  配置说明"
+echo "  配置高德地图 API Key"
 echo "==========================================="
 echo ""
-echo "1. 获取高德地图 API Key："
-echo "   访问 https://lbs.amap.com/"
-echo "   注册账号并创建应用，获取 API Key"
+echo "首次使用需要配置 API Key。"
 echo ""
-echo "2. 配置环境变量："
-echo "   export AMAP_API_KEY=your_api_key_here"
+echo "获取方式："
+echo "  1. 访问 https://lbs.amap.com/"
+echo "  2. 注册/登录账号"
+echo "  3. 进入控制台 → 应用管理 → 我的应用"
+echo "  4. 创建新应用，选择 Web 服务类型"
+echo "  5. 复制 API Key"
 echo ""
-echo "3. 使用方法："
-echo "   在 Claude Code 中输入 /field-research-plan"
-echo "   或者提到'田野调查'、'行程规划'等关键词"
+
+read -p "请输入你的 API Key（或按 Enter 跳过）: " API_KEY
+
+if [ -n "$API_KEY" ]; then
+    # 检测 shell 类型
+    if [ -n "$ZSH_VERSION" ]; then
+        SHELL_RC="$HOME/.zshrc"
+    else
+        SHELL_RC="$HOME/.bashrc"
+    fi
+
+    # 检查是否已存在
+    if grep -q "AMAP_API_KEY" "$SHELL_RC" 2>/dev/null; then
+        echo -e "${YELLOW}更新已存在的配置...${NC}"
+        sed -i.bak "s/export AMAP_API_KEY=.*/export AMAP_API_KEY=$API_KEY/" "$SHELL_RC"
+    else
+        echo -e "${YELLOW}添加配置到 $SHELL_RC...${NC}"
+        echo "" >> "$SHELL_RC"
+        echo "# 田野调查行程规划 - 高德地图 API Key" >> "$SHELL_RC"
+        echo "export AMAP_API_KEY=$API_KEY" >> "$SHELL_RC"
+    fi
+
+    # 立即生效
+    export AMAP_API_KEY=$API_KEY
+    echo -e "${GREEN}✓ API Key 已配置并生效！${NC}"
+else
+    echo -e "${YELLOW}跳过 API Key 配置。${NC}"
+    echo "  稍后请手动配置："
+    echo "  export AMAP_API_KEY=your_key_here"
+fi
+
+echo ""
+echo "==========================================="
+echo "  使用方法"
+echo "==========================================="
+echo ""
+echo "在 Claude Code 中输入 /field-research-plan"
+echo "或者提到'田野调查'、'行程规划'等关键词"
 echo ""
 echo "==========================================="
 echo "  安装完成！"

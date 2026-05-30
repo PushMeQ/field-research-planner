@@ -456,6 +456,56 @@ PDF 包含：
 - 总体评价：是否可行
 - 路线优化建议：如何避免回头路
 
+## API Key 配置
+
+首次使用需要配置高德地图 API Key。
+
+### 获取 API Key
+
+1. 访问 https://lbs.amap.com/
+2. 注册/登录账号
+3. 进入"控制台" → "应用管理" → "我的应用"
+4. 创建新应用，选择"Web 服务"类型
+5. 复制 API Key
+
+### 配置方式（选择一种）
+
+#### 方式一：永久配置（推荐）
+
+**macOS/Linux（Bash）：**
+```bash
+echo 'export AMAP_API_KEY=your_key_here' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**macOS/Linux（Zsh）：**
+```bash
+echo 'export AMAP_API_KEY=your_key_here' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**Windows（PowerShell）：**
+```powershell
+[System.Environment]::SetEnvironmentVariable('AMAP_API_KEY', 'your_key_here', 'User')
+$env:AMAP_API_KEY = 'your_key_here'
+```
+
+#### 方式二：临时配置（仅当前对话有效）
+```bash
+export AMAP_API_KEY=your_key_here
+```
+
+**注意：** 推荐使用永久配置，这样每次开启新对话时都会自动加载 API Key。
+
+### 验证配置
+
+在 Claude Code 中输入以下命令验证：
+```bash
+echo $AMAP_API_KEY
+```
+
+如果显示你的 API Key，说明配置成功。
+
 ## 注意事项
 
 1. **对话优先**：所有规划都在对话中完成
